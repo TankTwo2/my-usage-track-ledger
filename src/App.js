@@ -6,7 +6,6 @@ function App() {
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
-<<<<<<< HEAD
         <p>
           Edit <code>src/App.js</code> and save to reload.
         </p>
@@ -18,11 +17,6 @@ function App() {
         >
           Learn React
         </a>
-=======
-        <div className="App">
-      <h1>Hello, World!</h1>
-    </div>
->>>>>>> 2ca51f8 (init)
       </header>
     </div>
   );
