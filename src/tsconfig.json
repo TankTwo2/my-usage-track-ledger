@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+      "target": "es6",                          // 출력할 JavaScript 버전 (ES6 이상)
+      "module": "commonjs",                     // 모듈 시스템 (Node.js 환경에서는 commonjs)
+      "strict": true,                           // 엄격한 타입 검사 옵션 (권장)
+      "esModuleInterop": true,                  // ES 모듈 호환을 위해 설정 (default import 사용 가능)
+      "skipLibCheck": true,                     // 라이브러리 파일들의 타입 검사 생략 (속도 향상)
+      "forceConsistentCasingInFileNames": true, // 파일명 대소문자 일관성 강제
+      "outDir": "./dist",                       // 컴파일된 JavaScript 파일 출력 디렉토리
+      "rootDir": "./src",                       // 소스 코드의 루트 디렉토리
+      "moduleResolution": "node",               // Node.js 모듈 해석 방식 (node_modules에서 모듈 찾기)
+      "resolveJsonModule": true,                // JSON 파일을 모듈처럼 import할 수 있도록 설정
+      "lib": ["es2015", "dom"],                 // 사용할 라이브러리 (ES6와 DOM을 사용할 수 있도록 설정)
+      "allowJs": true,                          // JavaScript 파일도 TypeScript로 처리할 수 있도록 설정
+      "noImplicitAny": true,                    // `any` 타입을 암묵적으로 허용하지 않음
+      "noUnusedLocals": true,                   // 사용되지 않는 로컬 변수에 경고
+      "noUnusedParameters": true,               // 사용되지 않는 파라미터에 경고
+      "strictNullChecks": true,                 // null 및 undefined를 엄격하게 검사
+      "skipDefaultLibCheck": true               // 기본 라이브러리 파일에 대한 타입 검사 생략
+    },
+    "include": [
+      "src/**/*"                                // 컴파일할 파일을 지정 (src 폴더의 모든 파일 포함)
+    ],
+    "exclude": [
+      "node_modules"                            // node_modules 폴더 제외
+    ]
+  }
