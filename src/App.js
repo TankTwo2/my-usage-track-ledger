@@ -34,33 +34,16 @@ function App() {
         if (electronAvailable) {
             loadInitialData();
         } else {
-            // 브라우저 환경에서는 테스트 데이터 표시
-            setSystemInfo({
-                message: '개발 모드 (브라우저)',
-                timestamp: new Date().toISOString(),
-                platform: 'browser',
-                arch: 'web',
-                hostname: 'localhost',
-                uptime: 0,
-            });
-            setAppUsage([
-                { app_name: 'Chrome', total_usage_seconds: 900 }, // 15분
-                { app_name: 'Safari', total_usage_seconds: 480 }, // 8분
-                { app_name: 'VS Code', total_usage_seconds: 720 }, // 12분
-                { app_name: 'Terminal', total_usage_seconds: 300 }, // 5분
-            ]);
-            setDailyStats({
-                total_apps: 4,
-                total_usage_seconds: 2400, // 40분
-                date: new Date().toISOString().split('T')[0],
-            });
-            setLoading(false);
+            // 브라우저 환경에서는 localStorage를 사용하여 데이터 누적
+            loadBrowserData();
         }
 
         // 실시간 업데이트 (5초마다)
         const interval = setInterval(() => {
             if (electronAvailable) {
                 updateAppUsage();
+            } else {
+                updateBrowserData();
             }
         }, 5000);
 
@@ -82,13 +65,32 @@ function App() {
             const sysInfo = await window.electronAPI.getSystemInfo();
             setSystemInfo(sysInfo);
 
-            // 앱 사용량 로드
-            const apps = await window.electronAPI.getAppUsage('today');
-            setAppUsage(apps);
+            // 앱 사용량 로드 (Electron에서도 localStorage 백업 사용)
+            const today = new Date().toISOString().split('T')[0];
+            const storedData = localStorage.getItem(`usage_${today}`);
 
-            // 일일 통계 로드
-            const stats = await window.electronAPI.getDailyStats('today');
-            setDailyStats(stats);
+            if (storedData) {
+                // localStorage에 저장된 데이터가 있으면 사용
+                const data = JSON.parse(storedData);
+                setAppUsage(data.appUsage);
+                setDailyStats(data.dailyStats);
+            } else {
+                // 없으면 서버에서 로드
+                const apps = await window.electronAPI.getAppUsage('today');
+                const stats = await window.electronAPI.getDailyStats('today');
+
+                setAppUsage(apps);
+                setDailyStats(stats);
+
+                // localStorage에 저장
+                localStorage.setItem(
+                    `usage_${today}`,
+                    JSON.stringify({
+                        appUsage: apps,
+                        dailyStats: stats,
+                    })
+                );
+            }
         } catch (error) {
             console.error('데이터 로드 오류:', error);
         } finally {
@@ -103,12 +105,93 @@ function App() {
             }
 
             const apps = await window.electronAPI.getAppUsage('today');
-            setAppUsage(apps);
-
             const stats = await window.electronAPI.getDailyStats('today');
+
+            setAppUsage(apps);
             setDailyStats(stats);
+
+            // localStorage에 업데이트된 데이터 저장
+            const today = new Date().toISOString().split('T')[0];
+            localStorage.setItem(
+                `usage_${today}`,
+                JSON.stringify({
+                    appUsage: apps,
+                    dailyStats: stats,
+                })
+            );
         } catch (error) {
             console.error('앱 사용량 업데이트 오류:', error);
+        }
+    };
+
+    const loadBrowserData = () => {
+        const today = new Date().toISOString().split('T')[0];
+        const storedData = localStorage.getItem(`usage_${today}`);
+
+        if (storedData) {
+            const data = JSON.parse(storedData);
+            setSystemInfo(data.systemInfo);
+            setAppUsage(data.appUsage);
+            setDailyStats(data.dailyStats);
+        } else {
+            // 초기 데이터 설정
+            const initialData = {
+                systemInfo: {
+                    message: '개발 모드 (브라우저)',
+                    platform: 'browser',
+                    arch: 'web',
+                    hostname: 'localhost',
+                    uptime: 0,
+                },
+                appUsage: [
+                    { app_name: 'Chrome', total_usage_seconds: 0 },
+                    { app_name: 'Safari', total_usage_seconds: 0 },
+                    { app_name: 'VS Code', total_usage_seconds: 0 },
+                    { app_name: 'Terminal', total_usage_seconds: 0 },
+                ],
+                dailyStats: {
+                    total_apps: 4,
+                    total_usage_seconds: 0,
+                    date: today,
+                },
+            };
+
+            setSystemInfo(initialData.systemInfo);
+            setAppUsage(initialData.appUsage);
+            setDailyStats(initialData.dailyStats);
+            localStorage.setItem(`usage_${today}`, JSON.stringify(initialData));
+        }
+
+        setLoading(false);
+    };
+
+    const updateBrowserData = () => {
+        const today = new Date().toISOString().split('T')[0];
+        const storedData = localStorage.getItem(`usage_${today}`);
+
+        if (storedData) {
+            const data = JSON.parse(storedData);
+
+            // 5초씩 사용 시간 추가
+            const updatedAppUsage = data.appUsage.map((app) => ({
+                ...app,
+                total_usage_seconds: app.total_usage_seconds + 5,
+            }));
+
+            const totalUsageSeconds = updatedAppUsage.reduce((sum, app) => sum + app.total_usage_seconds, 0);
+
+            const updatedData = {
+                ...data,
+                appUsage: updatedAppUsage,
+                dailyStats: {
+                    ...data.dailyStats,
+                    total_usage_seconds: totalUsageSeconds,
+                },
+            };
+
+            setAppUsage(updatedAppUsage);
+            setDailyStats(updatedData.dailyStats);
+            localStorage.setItem(`usage_${today}`, JSON.stringify(updatedData));
         }
     };
 
@@ -139,10 +222,10 @@ function App() {
                         <h2>시스템 정보</h2>
                         <div className="info-grid">
                             <div className="info-item">
-                                <strong>모드:</strong> {systemInfo.message}
+                                <strong>상태:</strong> {systemInfo.message}
                             </div>
                             <div className="info-item">
-                                <strong>시작 시간:</strong> {new Date(systemInfo.timestamp).toLocaleString()}
+                                <strong>플랫폼:</strong> {systemInfo.platform}
                             </div>
                         </div>
                     </section>

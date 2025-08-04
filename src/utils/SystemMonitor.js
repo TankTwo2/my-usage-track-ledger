@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 class SystemMonitor {
     constructor(dbManager) {
         this.dbManager = dbManager;
@@ -130,8 +133,7 @@ class SystemMonitor {
         try {
             const os = require('os');
             return {
-                message: '앱 사용량 추적 모드',
-                timestamp: new Date().toISOString(),
+                message: '오늘의 앱 사용량 추적',
                 platform: os.platform(),
                 arch: os.arch(),
                 hostname: os.hostname(),
@@ -140,8 +142,7 @@ class SystemMonitor {
         } catch (error) {
             console.error('시스템 정보 수집 오류:', error);
             return {
-                message: '앱 사용량 추적 모드',
-                timestamp: new Date().toISOString(),
+                message: '오늘의 앱 사용량 추적',
             };
         }
     }
