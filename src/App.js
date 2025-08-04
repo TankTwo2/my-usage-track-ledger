@@ -51,12 +51,11 @@ function App() {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [isElectron]);
 
     const loadInitialData = async () => {
         try {
             setLoading(true);
-            console.log('loadInitialData 시작');
 
             // window.electronAPI가 정의되지 않았을 때를 대비
             if (!window.electronAPI) {
@@ -72,8 +71,7 @@ function App() {
             // 앱 사용량 로드
             const apps = await window.electronAPI.getAppUsage('today');
             const stats = await window.electronAPI.getDailyStats('today');
-            console.log('로드된 앱 사용량:', apps);
-            console.log('로드된 일일 통계:', stats);
+
             setAppUsage(apps);
             setDailyStats(stats);
         } catch (error) {
@@ -85,11 +83,8 @@ function App() {
 
     const updateAppUsage = async () => {
         try {
-            console.log('updateAppUsage 시작');
             const apps = await window.electronAPI.getAppUsage('today');
             const stats = await window.electronAPI.getDailyStats('today');
-            console.log('업데이트된 앱 사용량:', apps);
-            console.log('업데이트된 일일 통계:', stats);
             setAppUsage(apps);
             setDailyStats(stats);
         } catch (error) {

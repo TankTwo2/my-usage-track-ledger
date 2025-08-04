@@ -115,8 +115,6 @@ class DatabaseManager {
 
     async saveAppUsage(appName, usageSeconds) {
         try {
-            console.log(`${appName} 앱 사용량 저장 시작: ${usageSeconds}초`);
-
             // 데이터베이스 연결 확인
             if (!this.db) {
                 console.error('데이터베이스가 연결되지 않았습니다.');
@@ -133,28 +131,24 @@ class DatabaseManager {
 
             if (existing) {
                 // 기존 데이터 업데이트 (사용 시간 추가)
-                console.log(`${appName} 기존 데이터 업데이트: ${existing.usage_count} + ${usageSeconds}`);
                 await this.run(
                     'UPDATE app_usage SET usage_count = usage_count + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                     [usageSeconds, existing.id]
                 );
             } else {
                 // 새 데이터 삽입 (사용 시간)
-                console.log(`${appName} 새 데이터 삽입: ${usageSeconds}초`);
                 await this.run('INSERT INTO app_usage (app_name, usage_count, usage_date) VALUES (?, ?, ?)', [
                     appName,
                     usageSeconds,
                     today,
                 ]);
             }
-            console.log(`${appName} 앱 사용량 저장 완료`);
         } catch (error) {
             console.error(`${appName} 앱 사용량 저장 오류:`, error);
             // 데이터베이스 파일 권한 재설정 시도
             try {
                 if (fs.existsSync(this.dbPath)) {
                     fs.chmodSync(this.dbPath, 0o666);
-                    console.log('데이터베이스 파일 권한 재설정 완료');
                 }
             } catch (chmodError) {
                 console.error('데이터베이스 파일 권한 재설정 오류:', chmodError);
@@ -195,7 +189,6 @@ class DatabaseManager {
             `;
 
             const result = await this.all(sql, params);
-            console.log('조회된 앱 사용량:', result);
             return result || [];
         } catch (error) {
             console.error('앱 사용량 조회 오류:', error);
@@ -231,7 +224,6 @@ class DatabaseManager {
             `;
 
             const result = await this.get(sql, params);
-            console.log('조회된 일일 통계:', result);
 
             return {
                 total_apps: result?.total_apps || 0,

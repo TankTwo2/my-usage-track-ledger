@@ -107,9 +107,7 @@ ipcMain.handle('getSystemInfo', async () => {
 
 ipcMain.handle('getAppUsage', async (event, period = 'today') => {
     try {
-        console.log('getAppUsage 호출됨, period:', period);
         const result = await dbManager.getAppUsage(period);
-        console.log('getAppUsage 결과:', result);
         return result;
     } catch (error) {
         console.error('getAppUsage 에러:', error);
@@ -119,9 +117,7 @@ ipcMain.handle('getAppUsage', async (event, period = 'today') => {
 
 ipcMain.handle('getDailyStats', async (event, period = 'today') => {
     try {
-        console.log('getDailyStats 호출됨, period:', period);
         const result = await dbManager.getDailyStats(period);
-        console.log('getDailyStats 결과:', result);
         return result;
     } catch (error) {
         console.error('getDailyStats 에러:', error);

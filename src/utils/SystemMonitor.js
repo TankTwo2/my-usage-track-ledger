@@ -31,21 +31,13 @@ class SystemMonitor {
 
     async collectAppUsage() {
         try {
-            console.log('=== 앱 사용량 수집 시작 ===');
-
             // 현재 포커스된 앱 가져오기
             const focusedApp = await this.getFocusedApp();
-            console.log('현재 포커스된 앱:', focusedApp);
 
             if (focusedApp) {
-                console.log(`포커스된 앱 이름: ${focusedApp.cmd}`);
                 // 포커스된 앱에만 사용 시간 추가 (5초)
                 await this.updateAppUsage([focusedApp]);
-                console.log(`✅ ${focusedApp.cmd}에 5초 추가됨`);
-            } else {
-                console.log('❌ 포커스된 앱이 없음');
             }
-            console.log('=== 앱 사용량 수집 완료 ===');
         } catch (error) {
             console.error('앱 사용량 수집 오류:', error);
         }
@@ -58,12 +50,11 @@ class SystemMonitor {
             const execAsync = promisify(exec);
 
             // macOS에서 현재 활성 윈도우의 앱 이름 가져오기
-            const { stdout } = await execAsync(
-                'osascript -e \'tell application "System Events" to get name of first application process whose frontmost is true\''
-            );
-            const appName = stdout.trim();
+            const command =
+                'osascript -e \'tell application "System Events" to get name of first application process whose frontmost is true\'';
 
-            console.log('활성 앱 이름:', appName);
+            const { stdout } = await execAsync(command);
+            const appName = stdout.trim();
 
             if (appName && appName !== 'System Events' && appName !== '') {
                 return {
@@ -92,30 +83,18 @@ class SystemMonitor {
     }
 
     async updateAppUsage(processes) {
-        console.log('=== updateAppUsage 시작 ===');
-        console.log('받은 프로세스:', processes);
-
         if (!processes || processes.length === 0) {
-            console.log('❌ 업데이트할 앱이 없음');
             return;
         }
 
         // 포커스된 앱 하나만 처리
         const focusedApp = processes[0];
-        console.log('처리할 포커스된 앱:', focusedApp);
-
         const appName = this.extractAppName(focusedApp.cmd);
-        console.log('추출된 앱 이름:', appName);
 
         if (appName) {
-            console.log(`🎯 현재 포커스된 앱: ${appName}`);
             // 포커스된 앱에만 5초 추가
             await this.dbManager.saveAppUsage(appName, 5);
-            console.log(`✅ ${appName}에 5초 사용 시간 추가됨`);
-        } else {
-            console.log('❌ 유효하지 않은 앱 이름:', focusedApp.cmd);
         }
-        console.log('=== updateAppUsage 완료 ===');
     }
 
     extractAppName(cmd) {
