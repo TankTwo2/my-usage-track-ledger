@@ -105,9 +105,9 @@ ipcMain.handle('getSystemInfo', async () => {
     return await systemMonitor.getSystemInfo();
 });
 
-ipcMain.handle('getAppUsage', async (event, period = 'today') => {
+ipcMain.handle('getAppUsage', async (event, period = 'today', platform = null) => {
     try {
-        const result = await dbManager.getAppUsage(period);
+        const result = await dbManager.getAppUsage(period, platform);
         return result;
     } catch (error) {
         console.error('getAppUsage 에러:', error);
@@ -115,13 +115,14 @@ ipcMain.handle('getAppUsage', async (event, period = 'today') => {
     }
 });
 
-ipcMain.handle('getDailyStats', async (event, period = 'today') => {
+ipcMain.handle('getDailyStats', async (event, period = 'today', platform = null) => {
     try {
-        const result = await dbManager.getDailyStats(period);
+        const result = await dbManager.getDailyStats(period, platform);
         return result;
     } catch (error) {
         console.error('getDailyStats 에러:', error);
         return {
+            platform: platform || 'all',
             total_apps: 0,
             total_usage_seconds: 0,
             date: new Date().toISOString().split('T')[0],

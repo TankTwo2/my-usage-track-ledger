@@ -7,6 +7,30 @@ class SystemMonitor {
         this.monitoringInterval = null;
         this.isMonitoring = false;
         this.appStartTimes = {}; // 앱별 시작 시간 추적
+        this.platform = this.detectPlatform();
+    }
+
+    detectPlatform() {
+        const os = require('os');
+        const platform = os.platform();
+
+        let detectedPlatform;
+        switch (platform) {
+            case 'win32':
+                detectedPlatform = 'windows';
+                break;
+            case 'darwin':
+                detectedPlatform = 'macos';
+                break;
+            case 'android':
+                detectedPlatform = 'android';
+                break;
+            default:
+                detectedPlatform = 'macos'; // 기본값
+        }
+
+        console.log('감지된 플랫폼:', platform, '->', detectedPlatform);
+        return detectedPlatform;
     }
 
     async start() {
@@ -92,8 +116,9 @@ class SystemMonitor {
         const appName = this.extractAppName(focusedApp.cmd);
 
         if (appName) {
-            // 포커스된 앱에만 5초 추가
-            await this.dbManager.saveAppUsage(appName, 5);
+            console.log(`${appName} 앱에 ${this.platform} 플랫폼으로 5초 추가`);
+            // 포커스된 앱에만 5초 추가 (플랫폼 정보 포함)
+            await this.dbManager.saveAppUsage(appName, 5, this.platform);
         }
     }
 

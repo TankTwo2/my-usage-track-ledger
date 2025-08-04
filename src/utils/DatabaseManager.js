@@ -40,24 +40,27 @@ class DatabaseManager {
 
     async createTables() {
         const tables = [
-            // 앱 사용량 테이블
+            // 앱 사용량 테이블 (플랫폼 정보 추가)
             `CREATE TABLE IF NOT EXISTS app_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 app_name TEXT NOT NULL,
+                platform TEXT NOT NULL DEFAULT 'macos',
                 usage_count INTEGER DEFAULT 0,
                 usage_date DATE DEFAULT CURRENT_DATE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`,
 
-            // 일일 통계 테이블
+            // 일일 통계 테이블 (플랫폼별 통계)
             `CREATE TABLE IF NOT EXISTS daily_stats (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date DATE UNIQUE NOT NULL,
+                date DATE NOT NULL,
+                platform TEXT NOT NULL DEFAULT 'macos',
                 total_apps INTEGER DEFAULT 0,
                 total_usage_time INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(date, platform)
             )`,
 
             // 설정 테이블
@@ -113,7 +116,7 @@ class DatabaseManager {
         });
     }
 
-    async saveAppUsage(appName, usageSeconds) {
+    async saveAppUsage(appName, usageSeconds, platform = 'macos') {
         try {
             // 데이터베이스 연결 확인
             if (!this.db) {
@@ -124,10 +127,10 @@ class DatabaseManager {
             // 오늘 날짜의 앱 사용량 확인
             const today = new Date().toISOString().split('T')[0];
 
-            const existing = await this.get('SELECT * FROM app_usage WHERE app_name = ? AND usage_date = ?', [
-                appName,
-                today,
-            ]);
+            const existing = await this.get(
+                'SELECT * FROM app_usage WHERE app_name = ? AND platform = ? AND usage_date = ?',
+                [appName, platform, today]
+            );
 
             if (existing) {
                 // 기존 데이터 업데이트 (사용 시간 추가)
@@ -137,11 +140,10 @@ class DatabaseManager {
                 );
             } else {
                 // 새 데이터 삽입 (사용 시간)
-                await this.run('INSERT INTO app_usage (app_name, usage_count, usage_date) VALUES (?, ?, ?)', [
-                    appName,
-                    usageSeconds,
-                    today,
-                ]);
+                await this.run(
+                    'INSERT INTO app_usage (app_name, platform, usage_count, usage_date) VALUES (?, ?, ?, ?)',
+                    [appName, platform, usageSeconds, today]
+                );
             }
         } catch (error) {
             console.error(`${appName} 앱 사용량 저장 오류:`, error);
@@ -156,37 +158,48 @@ class DatabaseManager {
         }
     }
 
-    async getAppUsage(period = 'today') {
+    async getAppUsage(period = 'today', platform = null) {
         try {
-            let dateFilter = '';
+            let whereClause = '';
             const params = [];
 
+            // 기본 날짜 필터
             switch (period) {
                 case 'today':
-                    dateFilter = 'WHERE usage_date = DATE("now")';
+                    whereClause = 'WHERE usage_date = DATE("now")';
                     break;
                 case 'week':
-                    dateFilter = 'WHERE usage_date >= DATE("now", "-7 days")';
+                    whereClause = 'WHERE usage_date >= DATE("now", "-7 days")';
                     break;
                 case 'month':
-                    dateFilter = 'WHERE usage_date >= DATE("now", "-30 days")';
+                    whereClause = 'WHERE usage_date >= DATE("now", "-30 days")';
                     break;
                 default:
-                    dateFilter = 'WHERE usage_date = DATE("now")';
+                    whereClause = 'WHERE usage_date = DATE("now")';
+            }
+
+            // 플랫폼 필터 추가
+            if (platform) {
+                whereClause += ' AND platform = ?';
+                params.push(platform);
             }
 
             const sql = `
                 SELECT 
                     app_name,
+                    platform,
                     SUM(usage_count) as total_usage_seconds,
                     COUNT(*) as days_used
                 FROM app_usage 
-                ${dateFilter}
-                GROUP BY app_name 
+                ${whereClause}
+                GROUP BY app_name, platform
                 HAVING SUM(usage_count) > 0
                 ORDER BY total_usage_seconds DESC 
                 LIMIT 20
             `;
+
+            console.log('실행할 SQL (getAppUsage):', sql);
+            console.log('SQL 파라미터 (getAppUsage):', params);
 
             const result = await this.all(sql, params);
             return result || [];
@@ -196,23 +209,30 @@ class DatabaseManager {
         }
     }
 
-    async getDailyStats(period = 'today') {
+    async getDailyStats(period = 'today', platform = null) {
         try {
-            let dateFilter = '';
+            let whereClause = '';
             const params = [];
 
+            // 기본 날짜 필터
             switch (period) {
                 case 'today':
-                    dateFilter = 'WHERE usage_date = DATE("now")';
+                    whereClause = 'WHERE usage_date = DATE("now")';
                     break;
                 case 'week':
-                    dateFilter = 'WHERE usage_date >= DATE("now", "-7 days")';
+                    whereClause = 'WHERE usage_date >= DATE("now", "-7 days")';
                     break;
                 case 'month':
-                    dateFilter = 'WHERE usage_date >= DATE("now", "-30 days")';
+                    whereClause = 'WHERE usage_date >= DATE("now", "-30 days")';
                     break;
                 default:
-                    dateFilter = 'WHERE usage_date = DATE("now")';
+                    whereClause = 'WHERE usage_date = DATE("now")';
+            }
+
+            // 플랫폼 필터 추가
+            if (platform) {
+                whereClause += ' AND platform = ?';
+                params.push(platform);
             }
 
             const sql = `
@@ -220,12 +240,16 @@ class DatabaseManager {
                     COUNT(DISTINCT app_name) as total_apps,
                     SUM(usage_count) as total_usage_seconds
                 FROM app_usage 
-                ${dateFilter}
+                ${whereClause}
             `;
+
+            console.log('실행할 SQL:', sql);
+            console.log('SQL 파라미터:', params);
 
             const result = await this.get(sql, params);
 
             return {
+                platform: platform || 'all',
                 total_apps: result?.total_apps || 0,
                 total_usage_seconds: result?.total_usage_seconds || 0,
                 date: new Date().toISOString().split('T')[0],
@@ -233,6 +257,7 @@ class DatabaseManager {
         } catch (error) {
             console.error('일일 통계 조회 오류:', error);
             return {
+                platform: platform || 'all',
                 total_apps: 0,
                 total_usage_seconds: 0,
                 date: new Date().toISOString().split('T')[0],

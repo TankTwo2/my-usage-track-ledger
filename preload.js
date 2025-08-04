@@ -10,16 +10,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return ipcRenderer.invoke('getSystemInfo');
     },
 
-    // 앱 사용량
-    getAppUsage: (period) => {
-        console.log('getAppUsage 호출됨:', period);
-        return ipcRenderer.invoke('getAppUsage', period);
+    // 앱 사용량 (플랫폼별)
+    getAppUsage: (period, platform) => {
+        console.log('getAppUsage 호출됨:', period, platform);
+        return ipcRenderer.invoke('getAppUsage', period, platform);
     },
 
-    // 일일 통계
-    getDailyStats: (period) => {
-        console.log('getDailyStats 호출됨:', period);
-        return ipcRenderer.invoke('getDailyStats', period);
+    // 일일 통계 (플랫폼별)
+    getDailyStats: (period, platform) => {
+        console.log('getDailyStats 호출됨:', period, platform);
+        return ipcRenderer.invoke('getDailyStats', period, platform);
     },
 
     // 설정 관리

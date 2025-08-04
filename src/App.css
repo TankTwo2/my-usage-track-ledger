@@ -257,3 +257,67 @@ section {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
+
+.platform-overview {
+    margin: 2rem 0;
+}
+
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.platform-stats {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.platform-stats h3 {
+    margin: 0 0 1rem 0;
+    color: #007bff;
+    font-size: 1.2rem;
+}
+
+.platform-stats .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.platform-stats .stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.platform-stats .stat-card h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: #adb5bd;
+}
+
+.platform-stats .stat-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #007bff;
+}
+
+.total-stats {
+    margin: 2rem 0;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.total-stats h2 {
+    margin: 0 0 1rem 0;
+    color: #007bff;
+    font-size: 1.5rem;
+}
