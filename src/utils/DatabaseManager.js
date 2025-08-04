@@ -223,4 +223,4 @@ class DatabaseManager {
     }
 }
 
-module.exports = DatabaseManager;
+export default DatabaseManager;

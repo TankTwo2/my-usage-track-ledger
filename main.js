@@ -2,15 +2,11 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development';
 
-// 시스템 모니터링 모듈
-const SystemMonitor = require('./src/utils/SystemMonitor');
-const DatabaseManager = require('./src/utils/DatabaseManager');
-
 let mainWindow;
 let systemMonitor;
 let dbManager;
 
-function createWindow() {
+async function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -39,21 +35,29 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-    // 데이터베이스 초기화
-    dbManager = new DatabaseManager();
-    await dbManager.init();
+    try {
+        // 동적 import 사용
+        const { default: DatabaseManager } = await import('./src/utils/DatabaseManager.js');
+        const { default: SystemMonitor } = await import('./src/utils/SystemMonitor.js');
 
-    // 시스템 모니터링 시작
-    systemMonitor = new SystemMonitor(dbManager);
-    await systemMonitor.start();
+        // 데이터베이스 초기화
+        dbManager = new DatabaseManager();
+        await dbManager.init();
 
-    createWindow();
+        // 시스템 모니터링 시작
+        systemMonitor = new SystemMonitor(dbManager);
+        await systemMonitor.start();
 
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
+        await createWindow();
+
+        app.on('activate', () => {
+            if (BrowserWindow.getAllWindows().length === 0) {
+                createWindow();
+            }
+        });
+    } catch (error) {
+        console.error('앱 초기화 오류:', error);
+    }
 });
 
 app.on('window-all-closed', () => {

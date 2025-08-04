@@ -136,4 +136,4 @@ class SystemMonitor {
     }
 }
 
-module.exports = SystemMonitor;
+export default SystemMonitor;
