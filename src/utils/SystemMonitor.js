@@ -31,107 +31,106 @@ class SystemMonitor {
 
     async collectAppUsage() {
         try {
-            console.log('앱 사용량 수집 시작...');
-            // 임시로 하드코딩된 앱 사용량 데이터 사용
-            const mockProcesses = [{ cmd: 'chrome' }, { cmd: 'safari' }, { cmd: 'vscode' }, { cmd: 'terminal' }];
+            console.log('=== 앱 사용량 수집 시작 ===');
 
-            // 앱별 사용 시간 업데이트 (5초씩 추가)
-            await this.updateAppUsage(mockProcesses);
-            console.log('앱 사용량 수집 완료');
+            // 현재 포커스된 앱 가져오기
+            const focusedApp = await this.getFocusedApp();
+            console.log('현재 포커스된 앱:', focusedApp);
+
+            if (focusedApp) {
+                console.log(`포커스된 앱 이름: ${focusedApp.cmd}`);
+                // 포커스된 앱에만 사용 시간 추가 (5초)
+                await this.updateAppUsage([focusedApp]);
+                console.log(`✅ ${focusedApp.cmd}에 5초 추가됨`);
+            } else {
+                console.log('❌ 포커스된 앱이 없음');
+            }
+            console.log('=== 앱 사용량 수집 완료 ===');
         } catch (error) {
             console.error('앱 사용량 수집 오류:', error);
         }
     }
 
+    async getFocusedApp() {
+        try {
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+
+            // macOS에서 현재 활성 윈도우의 앱 이름 가져오기
+            const { stdout } = await execAsync(
+                'osascript -e \'tell application "System Events" to get name of first application process whose frontmost is true\''
+            );
+            const appName = stdout.trim();
+
+            console.log('활성 앱 이름:', appName);
+
+            if (appName && appName !== 'System Events' && appName !== '') {
+                return {
+                    cmd: appName,
+                    pid: 'active',
+                    cpu: '0.0',
+                    mem: '0.0',
+                };
+            }
+
+            return null;
+        } catch (error) {
+            console.error('포커스된 앱 정보 가져오기 오류:', error);
+            return null;
+        }
+    }
+
     async getActiveProcesses() {
-        // 임시 데이터 반환 (ps 명령어 문제 해결)
-        return [
-            { cmd: 'chrome', pid: '1234', cpu: '5.2', mem: '2.1' },
-            { cmd: 'safari', pid: '1235', cpu: '3.1', mem: '1.8' },
-            { cmd: 'vscode', pid: '1236', cpu: '8.5', mem: '4.2' },
-            { cmd: 'terminal', pid: '1237', cpu: '1.2', mem: '0.5' },
-            { cmd: 'cursor', pid: '1238', cpu: '6.3', mem: '3.1' },
-        ];
+        // 이 함수는 더 이상 사용하지 않지만 호환성을 위해 유지
+        return [];
+    }
+
+    filterActiveApps(processes) {
+        // 이 함수는 더 이상 사용하지 않지만 호환성을 위해 유지
+        return [];
     }
 
     async updateAppUsage(processes) {
-        const appUsage = {};
+        console.log('=== updateAppUsage 시작 ===');
+        console.log('받은 프로세스:', processes);
 
-        processes.forEach((proc) => {
-            const appName = this.extractAppName(proc.cmd);
-            if (appName) {
-                // 5초씩 사용 시간 추가
-                appUsage[appName] = (appUsage[appName] || 0) + 5;
-            }
-        });
-
-        console.log('수집된 앱 사용량:', appUsage);
-
-        // 데이터베이스에 앱 사용 시간 저장 (초 단위)
-        for (const [appName, usageSeconds] of Object.entries(appUsage)) {
-            console.log(`${appName} 앱에 ${usageSeconds}초 추가 저장 중...`);
-            await this.dbManager.saveAppUsage(appName, usageSeconds);
+        if (!processes || processes.length === 0) {
+            console.log('❌ 업데이트할 앱이 없음');
+            return;
         }
+
+        // 포커스된 앱 하나만 처리
+        const focusedApp = processes[0];
+        console.log('처리할 포커스된 앱:', focusedApp);
+
+        const appName = this.extractAppName(focusedApp.cmd);
+        console.log('추출된 앱 이름:', appName);
+
+        if (appName) {
+            console.log(`🎯 현재 포커스된 앱: ${appName}`);
+            // 포커스된 앱에만 5초 추가
+            await this.dbManager.saveAppUsage(appName, 5);
+            console.log(`✅ ${appName}에 5초 사용 시간 추가됨`);
+        } else {
+            console.log('❌ 유효하지 않은 앱 이름:', focusedApp.cmd);
+        }
+        console.log('=== updateAppUsage 완료 ===');
     }
 
     extractAppName(cmd) {
         if (!cmd) return null;
 
-        // 일반적인 앱 이름 추출
-        const commonApps = [
-            'chrome',
-            'firefox',
-            'safari',
-            'edge',
-            'vscode',
-            'sublime',
-            'atom',
-            'spotify',
-            'discord',
-            'slack',
-            'photoshop',
-            'illustrator',
-            'figma',
-            'excel',
-            'word',
-            'powerpoint',
-            'terminal',
-            'finder',
-            'explorer',
-            'cursor',
-            'intellij',
-            'webstorm',
-            'pycharm',
-            'xcode',
-            'android studio',
-            'postman',
-            'notion',
-            'zoom',
-            'teams',
-            'skype',
-            'telegram',
-            'whatsapp',
-            'wechat',
-            'line',
-            'kakao',
-            'naver',
-            'daum',
-            'google',
-            'microsoft',
-            'apple',
-            'adobe',
-        ];
+        // 포커스된 앱의 이름을 그대로 사용
+        const appName = cmd.trim();
 
-        const lowerCmd = cmd.toLowerCase();
-        for (const app of commonApps) {
-            if (lowerCmd.includes(app)) {
-                return app;
-            }
+        // 빈 문자열이나 시스템 이벤트는 제외
+        if (!appName || appName === 'System Events') {
+            return null;
         }
 
-        // 파일명에서 추출
-        const fileName = cmd.split('/').pop().split('\\').pop();
-        return fileName.split('.')[0];
+        // 앱 이름 정규화 (첫 글자 대문자로)
+        return appName.charAt(0).toUpperCase() + appName.slice(1).toLowerCase();
     }
 
     async getSystemInfo() {
