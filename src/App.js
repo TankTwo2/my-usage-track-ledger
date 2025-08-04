@@ -1,92 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
-
-const formatTime = (seconds) => {
-    if (!seconds || seconds === 0) return '0분';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes === 0) return `${remainingSeconds}초`;
-    if (remainingSeconds === 0) return `${minutes}분`;
-    return `${minutes}분 ${remainingSeconds}초`;
-};
-
-const PlatformStats = ({ platform, stats, apps }) => {
-    const platformNames = {
-        windows: 'Windows',
-        macos: 'macOS',
-        android: 'Android',
-    };
-
-    return (
-        <section className="platform-stats">
-            <h3>{platformNames[platform] || platform}</h3>
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <h4>사용한 앱 수</h4>
-                    <div className="stat-value">{stats?.total_apps || 0}개</div>
-                </div>
-                <div className="stat-card">
-                    <h4>총 사용 시간</h4>
-                    <div className="stat-value">{formatTime(stats?.total_usage_seconds || 0)}</div>
-                </div>
-            </div>
-            {apps && apps.length > 0 && (
-                <div className="usage-list">
-                    {apps.slice(0, 5).map((app, index) => (
-                        <div key={index} className="usage-item">
-                            <div className="app-name">{app.app_name}</div>
-                            <div className="usage-time">{formatTime(app.total_usage_seconds)}</div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </section>
-    );
-};
-
-const TotalStats = ({ dailyStats, appUsage }) => {
-    const filteredApps = appUsage?.filter((app) => app.total_usage_seconds > 0) || [];
-
-    return (
-        <section className="total-stats">
-            <h2>전체 통계</h2>
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <h3>사용한 앱 수</h3>
-                    <div className="stat-value">{dailyStats?.total_apps || 0}개</div>
-                </div>
-                <div className="stat-card">
-                    <h3>총 사용 시간</h3>
-                    <div className="stat-value">{formatTime(dailyStats?.total_usage_seconds || 0)}</div>
-                </div>
-            </div>
-
-            {filteredApps.length > 0 ? (
-                <div className="app-usage-section">
-                    <h3>앱별 사용량</h3>
-                    <div className="usage-list">
-                        {filteredApps.map((app, index) => (
-                            <div key={index} className="usage-item">
-                                <div className="app-name">{app.app_name}</div>
-                                <div className="usage-time">{formatTime(app.total_usage_seconds)}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <div className="no-data">
-                    <p>아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.</p>
-                </div>
-            )}
-        </section>
-    );
-};
+import TotalStats from './components/TotalStats';
+import PlatformStats from './components/PlatformStats';
+import { loadDataFromURL, saveDataToURL } from './utils/dataCompression';
 
 function App() {
     const [state, setState] = useState({
         loading: true,
         isElectron: false,
-        systemInfo: null,
         appUsage: [],
         dailyStats: null,
         platformStats: null,
@@ -94,6 +15,24 @@ function App() {
     });
 
     const updateState = (updates) => setState((prev) => ({ ...prev, ...updates }));
+    const isListenerRegistered = useRef(false);
+    const currentHandler = useRef(null);
+
+    // Electron API 확인 함수
+    const checkElectronAPI = () => {
+        console.log('Electron API 확인 중...');
+        console.log('window.electronAPI:', window.electronAPI);
+        if (window.electronAPI) {
+            console.log('electronAPI 함수들:', Object.keys(window.electronAPI));
+            console.log('sendUsageData:', typeof window.electronAPI.sendUsageData);
+            console.log('on:', typeof window.electronAPI.on);
+        }
+        return (
+            window.electronAPI &&
+            typeof window.electronAPI.sendUsageData === 'function' &&
+            typeof window.electronAPI.on === 'function'
+        );
+    };
 
     // 실시간 날짜/시간 업데이트
     useEffect(() => {
@@ -107,38 +46,26 @@ function App() {
 
     const loadElectronData = useCallback(async () => {
         try {
-            const [
-                sysInfo,
-                allApps,
-                allStats,
-                windowsApps,
-                windowsStats,
-                macosApps,
-                macosStats,
-                androidApps,
-                androidStats,
-            ] = await Promise.all([
-                window.electronAPI.getSystemInfo(),
-                window.electronAPI.getAppUsage('today', null), // 전체 데이터
-                window.electronAPI.getDailyStats('today', null), // 전체 통계
-                window.electronAPI.getAppUsage('today', 'windows'),
-                window.electronAPI.getDailyStats('today', 'windows'),
-                window.electronAPI.getAppUsage('today', 'macos'),
-                window.electronAPI.getDailyStats('today', 'macos'),
-                window.electronAPI.getAppUsage('today', 'android'),
-                window.electronAPI.getDailyStats('today', 'android'),
-            ]);
-
-            updateState({
-                systemInfo: sysInfo,
-                appUsage: allApps,
-                dailyStats: allStats,
-                platformStats: {
-                    windows: { apps: windowsApps, stats: windowsStats },
-                    macos: { apps: macosApps, stats: macosStats },
-                    android: { apps: androidApps, stats: androidStats },
-                },
-            });
+            // Electron에서 실제 데이터를 가져오는 대신 URL에서 로드
+            const urlData = loadDataFromURL();
+            if (!urlData) {
+                // 초기 빈 데이터 설정
+                const initialData = {
+                    appUsage: [],
+                    dailyStats: {
+                        total_apps: 0,
+                        total_usage_seconds: 0,
+                        date: new Date().toISOString().split('T')[0],
+                    },
+                    platformStats: {
+                        windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                        macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                        android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                    },
+                };
+                updateState(initialData);
+                saveDataToURL(initialData);
+            }
         } catch (error) {
             console.error('데이터 로드 오류:', error);
         } finally {
@@ -148,108 +75,145 @@ function App() {
 
     const loadBrowserData = useCallback(() => {
         const today = new Date().toISOString().split('T')[0];
-        const savedData = localStorage.getItem(`usage_${today}`);
 
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                updateState({
-                    systemInfo: {
-                        message: '브라우저 모드',
-                        platform: 'browser',
-                    },
-                    appUsage: data.appUsage || [],
-                    dailyStats: data.dailyStats || {
-                        total_apps: 0,
-                        total_usage_seconds: 0,
-                        date: today,
-                    },
-                    platformStats: {
-                        windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-                        macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-                        android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-                    },
-                    loading: false,
+        updateState({
+            appUsage: [],
+            dailyStats: {
+                total_apps: 0,
+                total_usage_seconds: 0,
+                date: today,
+            },
+            platformStats: {
+                windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            },
+            loading: false,
+        });
+    }, []);
+
+    // 사용량 데이터 처리 함수를 useRef로 관리
+    const handleUsageUpdate = useCallback((usageData) => {
+        console.log('사용량 데이터 수신:', usageData);
+
+        setState((prev) => {
+            console.log('setState 콜백 실행 - 이전 상태:', prev.appUsage);
+
+            const newAppUsage = [...prev.appUsage];
+            const existingAppIndex = newAppUsage.findIndex((app) => app.app_name === usageData.app_name);
+
+            if (existingAppIndex >= 0) {
+                newAppUsage[existingAppIndex].total_usage_seconds += usageData.usage_seconds;
+                console.log('기존 앱 업데이트:', newAppUsage[existingAppIndex]);
+            } else {
+                newAppUsage.push({
+                    app_name: usageData.app_name,
+                    total_usage_seconds: usageData.usage_seconds,
+                    platform: usageData.platform,
                 });
-            } catch (error) {
-                console.error('브라우저 데이터 로드 오류:', error);
-                updateState({ loading: false });
+                console.log('새 앱 추가:', newAppUsage[newAppUsage.length - 1]);
             }
-        } else {
-            updateState({
-                systemInfo: {
-                    message: '브라우저 모드',
-                    platform: 'browser',
-                },
-                appUsage: [],
+
+            // 통계 업데이트
+            const totalUsageSeconds = newAppUsage.reduce((sum, app) => sum + app.total_usage_seconds, 0);
+
+            const newData = {
+                appUsage: newAppUsage,
                 dailyStats: {
-                    total_apps: 0,
-                    total_usage_seconds: 0,
-                    date: today,
+                    total_apps: newAppUsage.length,
+                    total_usage_seconds: totalUsageSeconds,
+                    date: new Date().toISOString().split('T')[0],
                 },
                 platformStats: {
+                    windows: {
+                        apps: newAppUsage.filter((app) => app.platform === 'windows'),
+                        stats: {
+                            total_apps: newAppUsage.filter((app) => app.platform === 'windows').length,
+                            total_usage_seconds: newAppUsage
+                                .filter((app) => app.platform === 'windows')
+                                .reduce((sum, app) => sum + app.total_usage_seconds, 0),
+                        },
+                    },
+                    macos: {
+                        apps: newAppUsage.filter((app) => app.platform === 'macos'),
+                        stats: {
+                            total_apps: newAppUsage.filter((app) => app.platform === 'macos').length,
+                            total_usage_seconds: newAppUsage
+                                .filter((app) => app.platform === 'macos')
+                                .reduce((sum, app) => sum + app.total_usage_seconds, 0),
+                        },
+                    },
+                    android: {
+                        apps: newAppUsage.filter((app) => app.platform === 'android'),
+                        stats: {
+                            total_apps: newAppUsage.filter((app) => app.platform === 'android').length,
+                            total_usage_seconds: newAppUsage
+                                .filter((app) => app.platform === 'android')
+                                .reduce((sum, app) => sum + app.total_usage_seconds, 0),
+                        },
+                    },
+                },
+            };
+
+            // URL에 저장
+            saveDataToURL(newData);
+
+            return {
+                ...prev,
+                ...newData,
+            };
+        });
+    }, []);
+
+    // 초기 데이터 로드
+    useEffect(() => {
+        const electronAvailable = window.electronAPI !== undefined;
+        updateState({ isElectron: electronAvailable });
+
+        // URL에서 데이터 로드 시도
+        const urlData = loadDataFromURL();
+
+        if (urlData) {
+            // URL에서 데이터를 성공적으로 로드한 경우
+            updateState({
+                appUsage: urlData.appUsage || [],
+                dailyStats: urlData.dailyStats || {
+                    total_apps: 0,
+                    total_usage_seconds: 0,
+                    date: new Date().toISOString().split('T')[0],
+                },
+                platformStats: urlData.platformStats || {
                     windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
                     macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
                     android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
                 },
                 loading: false,
             });
-        }
-    }, []);
-
-    const updateBrowserData = useCallback(() => {
-        const today = new Date().toISOString().split('T')[0];
-        const savedData = localStorage.getItem(`usage_${today}`);
-
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                const updatedData = {
-                    appUsage: data.appUsage || [],
-                    dailyStats: data.dailyStats || {
-                        total_apps: 0,
-                        total_usage_seconds: 0,
-                        date: today,
-                    },
-                };
-
-                updateState({
-                    appUsage: updatedData.appUsage,
-                    dailyStats: updatedData.dailyStats,
-                });
-                localStorage.setItem(`usage_${today}`, JSON.stringify(updatedData));
-            } catch (error) {
-                console.error('브라우저 데이터 업데이트 오류:', error);
+        } else {
+            // URL에 데이터가 없는 경우
+            if (electronAvailable) {
+                loadElectronData();
+            } else {
+                loadBrowserData();
             }
         }
-    }, []);
 
-    useEffect(() => {
-        const electronAvailable = window.electronAPI !== undefined;
-        updateState({ isElectron: electronAvailable });
-
-        if (electronAvailable) {
-            loadElectronData();
-        } else {
-            loadBrowserData();
+        // Electron에서 사용량 모니터링 시작
+        if (electronAvailable && checkElectronAPI()) {
+            console.log('Electron API 확인됨 - 모니터링 시작');
+            // sendUsageData 함수가 있으므로 모니터링이 이미 시작된 것으로 간주
+        } else if (electronAvailable) {
+            console.log('Electron API가 아직 로드되지 않았습니다. 잠시 후 다시 시도합니다.');
+            // 1초 후 다시 시도
+            setTimeout(() => {
+                if (checkElectronAPI()) {
+                    console.log('Electron API 확인됨 - 모니터링 시작');
+                } else {
+                    console.log('Electron API 로드 실패');
+                }
+            }, 1000);
         }
-
-        const interval = setInterval(() => {
-            electronAvailable ? loadElectronData() : updateBrowserData();
-        }, 5000);
-
-        return () => clearInterval(interval);
-    }, [loadElectronData, loadBrowserData, updateBrowserData]);
-
-    if (state.loading) {
-        return (
-            <div className="App">
-                <div className="loading">
-                    <h2>앱 사용량 정보를 로딩 중...</h2>
-                </div>
-            </div>
-        );
-    }
+    }, [loadElectronData, loadBrowserData]);
 
     const formatCurrentDateTime = (date) => {
         const year = date.getFullYear();
@@ -261,6 +225,16 @@ function App() {
 
         return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
     };
+
+    if (state.loading) {
+        return (
+            <div className="App">
+                <div className="loading">
+                    <h2>앱 사용량 정보를 로딩 중...</h2>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="App">
@@ -304,7 +278,44 @@ function App() {
                     <div className="guide-content">
                         <p>• 5초마다 자동으로 앱 사용량을 추적합니다</p>
                         <p>• Windows, macOS, Android 플랫폼별로 통계를 제공합니다</p>
-                        <p>• 데이터는 로컬에 안전하게 저장됩니다</p>
+                        <p>• 데이터는 URL에 자동으로 저장됩니다</p>
+                        <p>• 새로고침해도 데이터가 유지됩니다</p>
+                        {!state.isElectron && (
+                            <div
+                                style={{
+                                    marginTop: '10px',
+                                    padding: '10px',
+                                    backgroundColor: '#f0f0f0',
+                                    borderRadius: '5px',
+                                }}
+                            >
+                                <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>브라우저 테스트:</p>
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const testData = {
+                                            app_name: 'Chrome',
+                                            platform: 'macos',
+                                            usage_seconds: 5,
+                                            timestamp: new Date().toISOString(),
+                                        };
+                                        console.log('테스트 데이터 전송:', testData);
+                                        // 브라우저에서 테스트용 데이터 처리
+                                        handleUsageUpdate(testData);
+                                    }}
+                                    style={{
+                                        padding: '5px 10px',
+                                        backgroundColor: '#007bff',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '3px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    테스트 데이터 추가
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </section>
             </main>

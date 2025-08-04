@@ -23,6 +23,16 @@ declare global {
                 total_usage_time: number;
                 date: string;
             }>;
+            startUsageMonitoring: () => Promise<{
+                success: boolean;
+                message: string;
+            }>;
+            stopUsageMonitoring: () => Promise<{
+                success: boolean;
+                message: string;
+            }>;
+            on: (event: string, callback: (...args: any[]) => void) => void;
+            off: (event: string) => void;
         };
     }
 }
@@ -120,5 +130,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getSystemInfo: () => ipcRenderer.invoke('getSystemInfo'),
     getAppUsage: (period: string) => ipcRenderer.invoke('getAppUsage', period),
     getDailyStats: (period: string) => ipcRenderer.invoke('getDailyStats', period),
+    startUsageMonitoring: () => ipcRenderer.invoke('startUsageMonitoring'),
+    stopUsageMonitoring: () => ipcRenderer.invoke('stopUsageMonitoring'),
+    on: (event: string, callback: (...args: any[]) => void) => {
+        ipcRenderer.on(event, (_, ...args) => callback(...args));
+    },
+    off: (event: string) => {
+        ipcRenderer.removeAllListeners(event);
+    },
 });
 ////////////////////////////////////////////////////////
