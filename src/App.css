@@ -74,9 +74,7 @@ section h2 {
     border-radius: 12px;
     padding: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
@@ -160,7 +158,7 @@ section h2 {
 
 .app-name {
     font-weight: 500;
-    text-transform: capitalize;
+    color: #495057;
 }
 
 .app-usage-count {
@@ -169,6 +167,34 @@ section h2 {
     border-radius: 20px;
     font-size: 0.9rem;
     font-weight: 600;
+}
+
+.usage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.usage-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.usage-time {
+    font-weight: 600;
+    color: #007bff;
+}
+
+.no-data {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
 }
 
 /* 반응형 디자인 */

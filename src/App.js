@@ -26,21 +26,24 @@ function App() {
     const [isElectron, setIsElectron] = useState(false);
 
     useEffect(() => {
-        // Electron 환경인지 확인
-        const electronAvailable = !!window.electronAPI;
-        setIsElectron(electronAvailable);
-        console.log('Electron 환경:', electronAvailable);
+        const checkElectronAvailability = () => {
+            const electronAvailable = window.electronAPI !== undefined;
+            setIsElectron(electronAvailable);
+            console.log('Electron 사용 가능:', electronAvailable);
 
-        if (electronAvailable) {
-            loadInitialData();
-        } else {
-            // 브라우저 환경에서는 localStorage를 사용하여 데이터 누적
-            loadBrowserData();
-        }
+            if (electronAvailable) {
+                loadInitialData();
+            } else {
+                // 브라우저 환경에서는 localStorage를 사용하여 데이터 누적
+                loadBrowserData();
+            }
+        };
+
+        checkElectronAvailability();
 
         // 실시간 업데이트 (5초마다)
         const interval = setInterval(() => {
-            if (electronAvailable) {
+            if (isElectron) {
                 updateAppUsage();
             } else {
                 updateBrowserData();
@@ -53,6 +56,7 @@ function App() {
     const loadInitialData = async () => {
         try {
             setLoading(true);
+            console.log('loadInitialData 시작');
 
             // window.electronAPI가 정의되지 않았을 때를 대비
             if (!window.electronAPI) {
@@ -65,32 +69,13 @@ function App() {
             const sysInfo = await window.electronAPI.getSystemInfo();
             setSystemInfo(sysInfo);
 
-            // 앱 사용량 로드 (Electron에서도 localStorage 백업 사용)
-            const today = new Date().toISOString().split('T')[0];
-            const storedData = localStorage.getItem(`usage_${today}`);
-
-            if (storedData) {
-                // localStorage에 저장된 데이터가 있으면 사용
-                const data = JSON.parse(storedData);
-                setAppUsage(data.appUsage);
-                setDailyStats(data.dailyStats);
-            } else {
-                // 없으면 서버에서 로드
-                const apps = await window.electronAPI.getAppUsage('today');
-                const stats = await window.electronAPI.getDailyStats('today');
-
-                setAppUsage(apps);
-                setDailyStats(stats);
-
-                // localStorage에 저장
-                localStorage.setItem(
-                    `usage_${today}`,
-                    JSON.stringify({
-                        appUsage: apps,
-                        dailyStats: stats,
-                    })
-                );
-            }
+            // 앱 사용량 로드
+            const apps = await window.electronAPI.getAppUsage('today');
+            const stats = await window.electronAPI.getDailyStats('today');
+            console.log('로드된 앱 사용량:', apps);
+            console.log('로드된 일일 통계:', stats);
+            setAppUsage(apps);
+            setDailyStats(stats);
         } catch (error) {
             console.error('데이터 로드 오류:', error);
         } finally {
@@ -100,25 +85,13 @@ function App() {
 
     const updateAppUsage = async () => {
         try {
-            if (!window.electronAPI) {
-                return;
-            }
-
+            console.log('updateAppUsage 시작');
             const apps = await window.electronAPI.getAppUsage('today');
             const stats = await window.electronAPI.getDailyStats('today');
-
+            console.log('업데이트된 앱 사용량:', apps);
+            console.log('업데이트된 일일 통계:', stats);
             setAppUsage(apps);
             setDailyStats(stats);
-
-            // localStorage에 업데이트된 데이터 저장
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem(
-                `usage_${today}`,
-                JSON.stringify({
-                    appUsage: apps,
-                    dailyStats: stats,
-                })
-            );
         } catch (error) {
             console.error('앱 사용량 업데이트 오류:', error);
         }
@@ -143,14 +116,9 @@ function App() {
                     hostname: 'localhost',
                     uptime: 0,
                 },
-                appUsage: [
-                    { app_name: 'Chrome', total_usage_seconds: 0 },
-                    { app_name: 'Safari', total_usage_seconds: 0 },
-                    { app_name: 'VS Code', total_usage_seconds: 0 },
-                    { app_name: 'Terminal', total_usage_seconds: 0 },
-                ],
+                appUsage: [],
                 dailyStats: {
-                    total_apps: 4,
+                    total_apps: 0,
                     total_usage_seconds: 0,
                     date: today,
                 },
@@ -249,16 +217,37 @@ function App() {
                 )}
 
                 {/* 앱 사용량 */}
-                {appUsage.length > 0 && (
-                    <section className="app-usage">
-                        <h2>앱 사용량 (오늘)</h2>
-                        <div className="app-list">
-                            {appUsage.map((app, index) => (
-                                <div key={index} className="app-item">
-                                    <div className="app-name">{app.app_name}</div>
-                                    <div className="app-usage-count">{formatTime(app.total_usage_seconds || 0)}</div>
+                {appUsage && appUsage.length > 0 ? (
+                    (() => {
+                        const filteredApps = appUsage.filter((app) => app.total_usage_seconds > 0);
+                        return filteredApps.length > 0 ? (
+                            <section className="app-usage">
+                                <h2>앱 사용량</h2>
+                                <div className="usage-list">
+                                    {filteredApps.map((app, index) => (
+                                        <div key={index} className="usage-item">
+                                            <div className="app-name">{app.app_name}</div>
+                                            <div className="usage-time">{formatTime(app.total_usage_seconds)}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </section>
+                        ) : (
+                            <section className="app-usage">
+                                <h2>앱 사용량</h2>
+                                <div className="usage-list">
+                                    <div className="no-data">
+                                        아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.
+                                    </div>
+                                </div>
+                            </section>
+                        );
+                    })()
+                ) : (
+                    <section className="app-usage">
+                        <h2>앱 사용량</h2>
+                        <div className="usage-list">
+                            <div className="no-data">아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.</div>
                         </div>
                     </section>
                 )}

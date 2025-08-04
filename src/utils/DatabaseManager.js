@@ -104,27 +104,36 @@ class DatabaseManager {
     }
 
     async saveAppUsage(appName, usageSeconds) {
-        // 오늘 날짜의 앱 사용량 확인
-        const today = new Date().toISOString().split('T')[0];
+        try {
+            console.log(`${appName} 앱 사용량 저장 시작: ${usageSeconds}초`);
 
-        const existing = await this.get('SELECT * FROM app_usage WHERE app_name = ? AND usage_date = ?', [
-            appName,
-            today,
-        ]);
+            // 오늘 날짜의 앱 사용량 확인
+            const today = new Date().toISOString().split('T')[0];
 
-        if (existing) {
-            // 기존 데이터 업데이트 (사용 시간 추가)
-            await this.run(
-                'UPDATE app_usage SET usage_count = usage_count + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                [usageSeconds, existing.id]
-            );
-        } else {
-            // 새 데이터 삽입 (사용 시간)
-            await this.run('INSERT INTO app_usage (app_name, usage_count, usage_date) VALUES (?, ?, ?)', [
+            const existing = await this.get('SELECT * FROM app_usage WHERE app_name = ? AND usage_date = ?', [
                 appName,
-                usageSeconds,
                 today,
             ]);
+
+            if (existing) {
+                // 기존 데이터 업데이트 (사용 시간 추가)
+                console.log(`${appName} 기존 데이터 업데이트: ${existing.usage_count} + ${usageSeconds}`);
+                await this.run(
+                    'UPDATE app_usage SET usage_count = usage_count + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                    [usageSeconds, existing.id]
+                );
+            } else {
+                // 새 데이터 삽입 (사용 시간)
+                console.log(`${appName} 새 데이터 삽입: ${usageSeconds}초`);
+                await this.run('INSERT INTO app_usage (app_name, usage_count, usage_date) VALUES (?, ?, ?)', [
+                    appName,
+                    usageSeconds,
+                    today,
+                ]);
+            }
+            console.log(`${appName} 앱 사용량 저장 완료`);
+        } catch (error) {
+            console.error(`${appName} 앱 사용량 저장 오류:`, error);
         }
     }
 
@@ -155,32 +164,17 @@ class DatabaseManager {
                 FROM app_usage 
                 ${dateFilter}
                 GROUP BY app_name 
+                HAVING SUM(usage_count) > 0
                 ORDER BY total_usage_seconds DESC 
                 LIMIT 20
             `;
 
             const result = await this.all(sql, params);
-
-            // 데이터가 없으면 임시 데이터 반환
-            if (!result || result.length === 0) {
-                return [
-                    { app_name: 'Chrome', total_usage_seconds: 900 }, // 15분
-                    { app_name: 'Safari', total_usage_seconds: 480 }, // 8분
-                    { app_name: 'VS Code', total_usage_seconds: 720 }, // 12분
-                    { app_name: 'Terminal', total_usage_seconds: 300 }, // 5분
-                ];
-            }
-
-            return result;
+            console.log('조회된 앱 사용량:', result);
+            return result || [];
         } catch (error) {
             console.error('앱 사용량 조회 오류:', error);
-            // 에러 발생 시 임시 데이터 반환
-            return [
-                { app_name: 'Chrome', total_usage_seconds: 900 },
-                { app_name: 'Safari', total_usage_seconds: 480 },
-                { app_name: 'VS Code', total_usage_seconds: 720 },
-                { app_name: 'Terminal', total_usage_seconds: 300 },
-            ];
+            return [];
         }
     }
 
@@ -212,26 +206,18 @@ class DatabaseManager {
             `;
 
             const result = await this.get(sql, params);
-
-            // 데이터가 없으면 임시 데이터 반환
-            if (!result || (result.total_apps === 0 && result.total_usage_seconds === 0)) {
-                return {
-                    total_apps: 4,
-                    total_usage_seconds: 2400, // 40분
-                    date: new Date().toISOString().split('T')[0],
-                };
-            }
+            console.log('조회된 일일 통계:', result);
 
             return {
-                ...result,
+                total_apps: result?.total_apps || 0,
+                total_usage_seconds: result?.total_usage_seconds || 0,
                 date: new Date().toISOString().split('T')[0],
             };
         } catch (error) {
             console.error('일일 통계 조회 오류:', error);
-            // 에러 발생 시 임시 데이터 반환
             return {
-                total_apps: 4,
-                total_usage_seconds: 2400, // 40분
+                total_apps: 0,
+                total_usage_seconds: 0,
                 date: new Date().toISOString().split('T')[0],
             };
         }

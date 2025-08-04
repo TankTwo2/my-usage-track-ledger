@@ -106,11 +106,31 @@ ipcMain.handle('getSystemInfo', async () => {
 });
 
 ipcMain.handle('getAppUsage', async (event, period = 'today') => {
-    return await dbManager.getAppUsage(period);
+    try {
+        console.log('getAppUsage 호출됨, period:', period);
+        const result = await dbManager.getAppUsage(period);
+        console.log('getAppUsage 결과:', result);
+        return result;
+    } catch (error) {
+        console.error('getAppUsage 에러:', error);
+        return [];
+    }
 });
 
 ipcMain.handle('getDailyStats', async (event, period = 'today') => {
-    return await dbManager.getDailyStats(period);
+    try {
+        console.log('getDailyStats 호출됨, period:', period);
+        const result = await dbManager.getDailyStats(period);
+        console.log('getDailyStats 결과:', result);
+        return result;
+    } catch (error) {
+        console.error('getDailyStats 에러:', error);
+        return {
+            total_apps: 0,
+            total_usage_seconds: 0,
+            date: new Date().toISOString().split('T')[0],
+        };
+    }
 });
 
 // 설정 관리

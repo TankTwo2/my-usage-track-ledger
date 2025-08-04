@@ -31,11 +31,13 @@ class SystemMonitor {
 
     async collectAppUsage() {
         try {
+            console.log('앱 사용량 수집 시작...');
             // 임시로 하드코딩된 앱 사용량 데이터 사용
             const mockProcesses = [{ cmd: 'chrome' }, { cmd: 'safari' }, { cmd: 'vscode' }, { cmd: 'terminal' }];
 
             // 앱별 사용 시간 업데이트 (5초씩 추가)
             await this.updateAppUsage(mockProcesses);
+            console.log('앱 사용량 수집 완료');
         } catch (error) {
             console.error('앱 사용량 수집 오류:', error);
         }
@@ -63,8 +65,11 @@ class SystemMonitor {
             }
         });
 
+        console.log('수집된 앱 사용량:', appUsage);
+
         // 데이터베이스에 앱 사용 시간 저장 (초 단위)
         for (const [appName, usageSeconds] of Object.entries(appUsage)) {
+            console.log(`${appName} 앱에 ${usageSeconds}초 추가 저장 중...`);
             await this.dbManager.saveAppUsage(appName, usageSeconds);
         }
     }
