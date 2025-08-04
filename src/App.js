@@ -10,30 +10,6 @@ const formatTime = (seconds) => {
     return `${minutes}분 ${remainingSeconds}초`;
 };
 
-const NoDataMessage = () => <div className="no-data">아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.</div>;
-
-const AppUsageSection = ({ appUsage }) => {
-    const filteredApps = appUsage?.filter((app) => app.total_usage_seconds > 0) || [];
-
-    return (
-        <section className="app-usage">
-            <h2>앱 사용량</h2>
-            <div className="usage-list">
-                {filteredApps.length > 0 ? (
-                    filteredApps.map((app, index) => (
-                        <div key={index} className="usage-item">
-                            <div className="app-name">{app.app_name}</div>
-                            <div className="usage-time">{formatTime(app.total_usage_seconds)}</div>
-                        </div>
-                    ))
-                ) : (
-                    <NoDataMessage />
-                )}
-            </div>
-        </section>
-    );
-};
-
 const PlatformStats = ({ platform, stats, apps }) => {
     const platformNames = {
         windows: 'Windows',
@@ -68,21 +44,43 @@ const PlatformStats = ({ platform, stats, apps }) => {
     );
 };
 
-const TotalStats = ({ dailyStats }) => (
-    <section className="total-stats">
-        <h2>전체 통계</h2>
-        <div className="stats-grid">
-            <div className="stat-card">
-                <h3>사용한 앱 수</h3>
-                <div className="stat-value">{dailyStats?.total_apps || 0}개</div>
+const TotalStats = ({ dailyStats, appUsage }) => {
+    const filteredApps = appUsage?.filter((app) => app.total_usage_seconds > 0) || [];
+
+    return (
+        <section className="total-stats">
+            <h2>전체 통계</h2>
+            <div className="stats-grid">
+                <div className="stat-card">
+                    <h3>사용한 앱 수</h3>
+                    <div className="stat-value">{dailyStats?.total_apps || 0}개</div>
+                </div>
+                <div className="stat-card">
+                    <h3>총 사용 시간</h3>
+                    <div className="stat-value">{formatTime(dailyStats?.total_usage_seconds || 0)}</div>
+                </div>
             </div>
-            <div className="stat-card">
-                <h3>총 사용 시간</h3>
-                <div className="stat-value">{formatTime(dailyStats?.total_usage_seconds || 0)}</div>
-            </div>
-        </div>
-    </section>
-);
+
+            {filteredApps.length > 0 ? (
+                <div className="app-usage-section">
+                    <h3>앱별 사용량</h3>
+                    <div className="usage-list">
+                        {filteredApps.map((app, index) => (
+                            <div key={index} className="usage-item">
+                                <div className="app-name">{app.app_name}</div>
+                                <div className="usage-time">{formatTime(app.total_usage_seconds)}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="no-data">
+                    <p>아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.</p>
+                </div>
+            )}
+        </section>
+    );
+};
 
 function App() {
     const [state, setState] = useState({
@@ -92,9 +90,20 @@ function App() {
         appUsage: [],
         dailyStats: null,
         platformStats: null,
+        currentDateTime: new Date(),
     });
 
     const updateState = (updates) => setState((prev) => ({ ...prev, ...updates }));
+
+    // 실시간 날짜/시간 업데이트
+    useEffect(() => {
+        const updateDateTime = () => {
+            updateState({ currentDateTime: new Date() });
+        };
+
+        const interval = setInterval(updateDateTime, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     const loadElectronData = useCallback(async () => {
         try {
@@ -242,32 +251,30 @@ function App() {
         );
     }
 
+    const formatCurrentDateTime = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
+    };
+
     return (
         <div className="App">
             <header className="App-header">
                 <h1>Usage Tracker</h1>
-                <p>앱 사용량 모니터링</p>
+                <p>오늘의 앱 사용량 추적</p>
+                <p className="current-time">{formatCurrentDateTime(state.currentDateTime)}</p>
                 {!state.isElectron && (
                     <p style={{ color: 'orange', fontSize: '14px' }}>브라우저 모드 - Electron 앱에서 실행하세요</p>
                 )}
             </header>
 
             <main className="App-main">
-                {state.systemInfo && (
-                    <section className="system-info">
-                        <h2>시스템 정보</h2>
-                        <div className="info-grid">
-                            <div className="info-item">
-                                <strong>상태:</strong> {state.systemInfo.message}
-                            </div>
-                            <div className="info-item">
-                                <strong>플랫폼:</strong> {state.systemInfo.platform}
-                            </div>
-                        </div>
-                    </section>
-                )}
-
-                {state.dailyStats && <TotalStats dailyStats={state.dailyStats} />}
+                {state.dailyStats && <TotalStats dailyStats={state.dailyStats} appUsage={state.appUsage} />}
 
                 {state.platformStats && (
                     <section className="platform-overview">
@@ -291,8 +298,6 @@ function App() {
                         </div>
                     </section>
                 )}
-
-                <AppUsageSection appUsage={state.appUsage} />
 
                 <section className="usage-guide">
                     <h2>사용 안내</h2>

@@ -8,24 +8,28 @@
 }
 
 .App-header {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 2rem 0;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: #282c34;
+    padding: 20px;
+    color: white;
+    text-align: center;
 }
 
 .App-header h1 {
-    margin: 0;
+    margin: 0 0 10px 0;
     font-size: 2.5rem;
-    font-weight: 700;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .App-header p {
-    margin: 0.5rem 0 0 0;
+    margin: 5px 0;
     font-size: 1.1rem;
-    opacity: 0.9;
+}
+
+.current-time {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem !important;
+    color: #61dafb;
+    margin: 10px 0 !important;
+    font-weight: bold;
 }
 
 .App-main {
@@ -191,9 +195,14 @@ section h2 {
 
 .no-data {
     text-align: center;
-    color: #6c757d;
-    font-style: italic;
     padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.no-data p {
+    margin: 0;
+    font-size: 1rem;
 }
 
 /* 반응형 디자인 */
