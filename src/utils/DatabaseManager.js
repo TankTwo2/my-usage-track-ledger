@@ -198,9 +198,6 @@ class DatabaseManager {
                 LIMIT 20
             `;
 
-            console.log('실행할 SQL (getAppUsage):', sql);
-            console.log('SQL 파라미터 (getAppUsage):', params);
-
             const result = await this.all(sql, params);
             return result || [];
         } catch (error) {
@@ -242,9 +239,6 @@ class DatabaseManager {
                 FROM app_usage 
                 ${whereClause}
             `;
-
-            console.log('실행할 SQL:', sql);
-            console.log('SQL 파라미터:', params);
 
             const result = await this.get(sql, params);
 

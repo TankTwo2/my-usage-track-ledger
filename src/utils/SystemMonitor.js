@@ -29,7 +29,6 @@ class SystemMonitor {
                 detectedPlatform = 'macos'; // 기본값
         }
 
-        console.log('감지된 플랫폼:', platform, '->', detectedPlatform);
         return detectedPlatform;
     }
 
@@ -40,8 +39,6 @@ class SystemMonitor {
         this.monitoringInterval = setInterval(async () => {
             await this.collectAppUsage();
         }, 5000); // 5초마다 앱 사용량 수집
-
-        console.log('앱 사용량 모니터링 시작됨');
     }
 
     async stop() {
@@ -50,7 +47,6 @@ class SystemMonitor {
             this.monitoringInterval = null;
         }
         this.isMonitoring = false;
-        console.log('앱 사용량 모니터링 중지됨');
     }
 
     async collectAppUsage() {
@@ -60,7 +56,7 @@ class SystemMonitor {
 
             if (focusedApp) {
                 // 포커스된 앱에만 사용 시간 추가 (5초)
-                await this.updateAppUsage([focusedApp]);
+                await this.updateAppUsage();
             }
         } catch (error) {
             console.error('앱 사용량 수집 오류:', error);
@@ -106,19 +102,14 @@ class SystemMonitor {
         return [];
     }
 
-    async updateAppUsage(processes) {
-        if (!processes || processes.length === 0) {
-            return;
-        }
-
-        // 포커스된 앱 하나만 처리
-        const focusedApp = processes[0];
-        const appName = this.extractAppName(focusedApp.cmd);
-
-        if (appName) {
-            console.log(`${appName} 앱에 ${this.platform} 플랫폼으로 5초 추가`);
-            // 포커스된 앱에만 5초 추가 (플랫폼 정보 포함)
-            await this.dbManager.saveAppUsage(appName, 5, this.platform);
+    async updateAppUsage() {
+        try {
+            const appName = await this.getFocusedApp();
+            if (appName && appName !== 'System Events') {
+                await this.dbManager.saveAppUsage(appName, this.platform);
+            }
+        } catch (error) {
+            console.error('앱 사용량 업데이트 오류:', error);
         }
     }
 

@@ -102,25 +102,28 @@ app.on('window-all-closed', () => {
 
 // IPC 핸들러들 - App.js에서 사용하는 이름과 일치
 ipcMain.handle('getSystemInfo', async () => {
-    return await systemMonitor.getSystemInfo();
+    try {
+        return await systemMonitor.getSystemInfo();
+    } catch (error) {
+        console.error('시스템 정보 조회 오류:', error);
+        return null;
+    }
 });
 
-ipcMain.handle('getAppUsage', async (event, period = 'today', platform = null) => {
+ipcMain.handle('getAppUsage', async (event, period, platform) => {
     try {
-        const result = await dbManager.getAppUsage(period, platform);
-        return result;
+        return await dbManager.getAppUsage(period, platform);
     } catch (error) {
-        console.error('getAppUsage 에러:', error);
+        console.error('앱 사용량 조회 오류:', error);
         return [];
     }
 });
 
-ipcMain.handle('getDailyStats', async (event, period = 'today', platform = null) => {
+ipcMain.handle('getDailyStats', async (event, period, platform) => {
     try {
-        const result = await dbManager.getDailyStats(period, platform);
-        return result;
+        return await dbManager.getDailyStats(period, platform);
     } catch (error) {
-        console.error('getDailyStats 에러:', error);
+        console.error('일일 통계 조회 오류:', error);
         return {
             platform: platform || 'all',
             total_apps: 0,

@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 const formatTime = (seconds) => {
-    if (!seconds) return '0분';
+    if (!seconds || seconds === 0) return '0분';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return minutes === 0
-        ? `${remainingSeconds}초`
-        : remainingSeconds === 0
-        ? `${minutes}분`
-        : `${minutes}분 ${remainingSeconds}초`;
+    if (minutes === 0) return `${remainingSeconds}초`;
+    if (remainingSeconds === 0) return `${minutes}분`;
+    return `${minutes}분 ${remainingSeconds}초`;
 };
 
 const NoDataMessage = () => <div className="no-data">아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.</div>;
@@ -42,8 +40,6 @@ const PlatformStats = ({ platform, stats, apps }) => {
         macos: 'macOS',
         android: 'Android',
     };
-
-    console.log(`PlatformStats ${platform}:`, { stats, apps });
 
     return (
         <section className="platform-stats">
@@ -90,23 +86,18 @@ const TotalStats = ({ dailyStats }) => (
 
 function App() {
     const [state, setState] = useState({
+        loading: true,
+        isElectron: false,
         systemInfo: null,
         appUsage: [],
         dailyStats: null,
-        loading: true,
-        isElectron: false,
+        platformStats: null,
     });
 
     const updateState = (updates) => setState((prev) => ({ ...prev, ...updates }));
 
-    const loadElectronData = async () => {
+    const loadElectronData = useCallback(async () => {
         try {
-            if (!window.electronAPI) {
-                console.error('electronAPI가 정의되지 않았습니다.');
-                return;
-            }
-
-            // 모든 플랫폼의 데이터를 병렬로 로드
             const [
                 sysInfo,
                 allApps,
@@ -139,79 +130,90 @@ function App() {
                     android: { apps: androidApps, stats: androidStats },
                 },
             });
-
-            console.log('로드된 플랫폼별 데이터:', {
-                windows: { apps: windowsApps, stats: windowsStats },
-                macos: { apps: macosApps, stats: macosStats },
-                android: { apps: androidApps, stats: androidStats },
-            });
         } catch (error) {
             console.error('데이터 로드 오류:', error);
         } finally {
             updateState({ loading: false });
         }
-    };
+    }, []);
 
-    const loadBrowserData = () => {
+    const loadBrowserData = useCallback(() => {
         const today = new Date().toISOString().split('T')[0];
-        const storedData = localStorage.getItem(`usage_${today}`);
+        const savedData = localStorage.getItem(`usage_${today}`);
 
-        if (storedData) {
-            const data = JSON.parse(storedData);
-            updateState({
-                systemInfo: data.systemInfo,
-                appUsage: data.appUsage,
-                dailyStats: data.dailyStats,
-                loading: false,
-            });
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                updateState({
+                    systemInfo: {
+                        message: '브라우저 모드',
+                        platform: 'browser',
+                    },
+                    appUsage: data.appUsage || [],
+                    dailyStats: data.dailyStats || {
+                        total_apps: 0,
+                        total_usage_seconds: 0,
+                        date: today,
+                    },
+                    platformStats: {
+                        windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                        macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                        android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                    },
+                    loading: false,
+                });
+            } catch (error) {
+                console.error('브라우저 데이터 로드 오류:', error);
+                updateState({ loading: false });
+            }
         } else {
-            const initialData = {
+            updateState({
                 systemInfo: {
-                    message: '개발 모드 (브라우저)',
+                    message: '브라우저 모드',
                     platform: 'browser',
-                    arch: 'web',
-                    hostname: 'localhost',
-                    uptime: 0,
                 },
                 appUsage: [],
-                dailyStats: { total_apps: 0, total_usage_seconds: 0, date: today },
-            };
-
-            updateState({
-                systemInfo: initialData.systemInfo,
-                appUsage: initialData.appUsage,
-                dailyStats: initialData.dailyStats,
+                dailyStats: {
+                    total_apps: 0,
+                    total_usage_seconds: 0,
+                    date: today,
+                },
+                platformStats: {
+                    windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                    macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                    android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                },
                 loading: false,
             });
-            localStorage.setItem(`usage_${today}`, JSON.stringify(initialData));
         }
-    };
+    }, []);
 
-    const updateBrowserData = () => {
+    const updateBrowserData = useCallback(() => {
         const today = new Date().toISOString().split('T')[0];
-        const storedData = localStorage.getItem(`usage_${today}`);
+        const savedData = localStorage.getItem(`usage_${today}`);
 
-        if (storedData) {
-            const data = JSON.parse(storedData);
-            const updatedAppUsage = data.appUsage.map((app) => ({
-                ...app,
-                total_usage_seconds: app.total_usage_seconds + 5,
-            }));
-            const totalUsageSeconds = updatedAppUsage.reduce((sum, app) => sum + app.total_usage_seconds, 0);
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                const updatedData = {
+                    appUsage: data.appUsage || [],
+                    dailyStats: data.dailyStats || {
+                        total_apps: 0,
+                        total_usage_seconds: 0,
+                        date: today,
+                    },
+                };
 
-            const updatedData = {
-                ...data,
-                appUsage: updatedAppUsage,
-                dailyStats: { ...data.dailyStats, total_usage_seconds: totalUsageSeconds },
-            };
-
-            updateState({
-                appUsage: updatedAppUsage,
-                dailyStats: updatedData.dailyStats,
-            });
-            localStorage.setItem(`usage_${today}`, JSON.stringify(updatedData));
+                updateState({
+                    appUsage: updatedData.appUsage,
+                    dailyStats: updatedData.dailyStats,
+                });
+                localStorage.setItem(`usage_${today}`, JSON.stringify(updatedData));
+            } catch (error) {
+                console.error('브라우저 데이터 업데이트 오류:', error);
+            }
         }
-    };
+    }, []);
 
     useEffect(() => {
         const electronAvailable = window.electronAPI !== undefined;
@@ -228,7 +230,7 @@ function App() {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [loadElectronData, loadBrowserData, updateBrowserData]);
 
     if (state.loading) {
         return (
