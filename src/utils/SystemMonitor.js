@@ -3,6 +3,7 @@ class SystemMonitor {
         this.dbManager = dbManager;
         this.monitoringInterval = null;
         this.isMonitoring = false;
+        this.appStartTimes = {}; // 앱별 시작 시간 추적
     }
 
     async start() {
@@ -30,7 +31,7 @@ class SystemMonitor {
             // 임시로 하드코딩된 앱 사용량 데이터 사용
             const mockProcesses = [{ cmd: 'chrome' }, { cmd: 'safari' }, { cmd: 'vscode' }, { cmd: 'terminal' }];
 
-            // 앱별 사용 시간 업데이트
+            // 앱별 사용 시간 업데이트 (5초씩 추가)
             await this.updateAppUsage(mockProcesses);
         } catch (error) {
             console.error('앱 사용량 수집 오류:', error);
@@ -54,13 +55,14 @@ class SystemMonitor {
         processes.forEach((proc) => {
             const appName = this.extractAppName(proc.cmd);
             if (appName) {
-                appUsage[appName] = (appUsage[appName] || 0) + 1;
+                // 5초씩 사용 시간 추가
+                appUsage[appName] = (appUsage[appName] || 0) + 5;
             }
         });
 
-        // 데이터베이스에 앱 사용 시간 저장
-        for (const [appName, usage] of Object.entries(appUsage)) {
-            await this.dbManager.saveAppUsage(appName, usage);
+        // 데이터베이스에 앱 사용 시간 저장 (초 단위)
+        for (const [appName, usageSeconds] of Object.entries(appUsage)) {
+            await this.dbManager.saveAppUsage(appName, usageSeconds);
         }
     }
 

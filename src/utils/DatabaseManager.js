@@ -103,7 +103,7 @@ class DatabaseManager {
         });
     }
 
-    async saveAppUsage(appName, usageCount) {
+    async saveAppUsage(appName, usageSeconds) {
         // 오늘 날짜의 앱 사용량 확인
         const today = new Date().toISOString().split('T')[0];
 
@@ -113,16 +113,16 @@ class DatabaseManager {
         ]);
 
         if (existing) {
-            // 기존 데이터 업데이트
+            // 기존 데이터 업데이트 (사용 시간 추가)
             await this.run(
                 'UPDATE app_usage SET usage_count = usage_count + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                [usageCount, existing.id]
+                [usageSeconds, existing.id]
             );
         } else {
-            // 새 데이터 삽입
+            // 새 데이터 삽입 (사용 시간)
             await this.run('INSERT INTO app_usage (app_name, usage_count, usage_date) VALUES (?, ?, ?)', [
                 appName,
-                usageCount,
+                usageSeconds,
                 today,
             ]);
         }
@@ -150,12 +150,12 @@ class DatabaseManager {
             const sql = `
                 SELECT 
                     app_name,
-                    SUM(usage_count) as total_usage,
+                    SUM(usage_count) as total_usage_seconds,
                     COUNT(*) as days_used
                 FROM app_usage 
                 ${dateFilter}
                 GROUP BY app_name 
-                ORDER BY total_usage DESC 
+                ORDER BY total_usage_seconds DESC 
                 LIMIT 20
             `;
 
@@ -164,10 +164,10 @@ class DatabaseManager {
             // 데이터가 없으면 임시 데이터 반환
             if (!result || result.length === 0) {
                 return [
-                    { app_name: 'Chrome', total_usage: 15 },
-                    { app_name: 'Safari', total_usage: 8 },
-                    { app_name: 'VS Code', total_usage: 12 },
-                    { app_name: 'Terminal', total_usage: 5 },
+                    { app_name: 'Chrome', total_usage_seconds: 900 }, // 15분
+                    { app_name: 'Safari', total_usage_seconds: 480 }, // 8분
+                    { app_name: 'VS Code', total_usage_seconds: 720 }, // 12분
+                    { app_name: 'Terminal', total_usage_seconds: 300 }, // 5분
                 ];
             }
 
@@ -176,10 +176,10 @@ class DatabaseManager {
             console.error('앱 사용량 조회 오류:', error);
             // 에러 발생 시 임시 데이터 반환
             return [
-                { app_name: 'Chrome', total_usage: 15 },
-                { app_name: 'Safari', total_usage: 8 },
-                { app_name: 'VS Code', total_usage: 12 },
-                { app_name: 'Terminal', total_usage: 5 },
+                { app_name: 'Chrome', total_usage_seconds: 900 },
+                { app_name: 'Safari', total_usage_seconds: 480 },
+                { app_name: 'VS Code', total_usage_seconds: 720 },
+                { app_name: 'Terminal', total_usage_seconds: 300 },
             ];
         }
     }
@@ -206,7 +206,7 @@ class DatabaseManager {
             const sql = `
                 SELECT 
                     COUNT(DISTINCT app_name) as total_apps,
-                    SUM(usage_count) as total_usage_time
+                    SUM(usage_count) as total_usage_seconds
                 FROM app_usage 
                 ${dateFilter}
             `;
@@ -214,10 +214,10 @@ class DatabaseManager {
             const result = await this.get(sql, params);
 
             // 데이터가 없으면 임시 데이터 반환
-            if (!result || (result.total_apps === 0 && result.total_usage_time === 0)) {
+            if (!result || (result.total_apps === 0 && result.total_usage_seconds === 0)) {
                 return {
                     total_apps: 4,
-                    total_usage_time: 40,
+                    total_usage_seconds: 2400, // 40분
                     date: new Date().toISOString().split('T')[0],
                 };
             }
@@ -231,7 +231,7 @@ class DatabaseManager {
             // 에러 발생 시 임시 데이터 반환
             return {
                 total_apps: 4,
-                total_usage_time: 40,
+                total_usage_seconds: 2400, // 40분
                 date: new Date().toISOString().split('T')[0],
             };
         }

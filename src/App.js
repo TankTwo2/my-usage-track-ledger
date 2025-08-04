@@ -3,6 +3,21 @@ import './App.css';
 
 // Electron API는 window.electronAPI를 통해 접근
 
+// 초를 분:초 형식으로 변환하는 함수
+const formatTime = (seconds) => {
+    if (!seconds) return '0분';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (minutes === 0) {
+        return `${remainingSeconds}초`;
+    } else if (remainingSeconds === 0) {
+        return `${minutes}분`;
+    } else {
+        return `${minutes}분 ${remainingSeconds}초`;
+    }
+};
+
 function App() {
     const [systemInfo, setSystemInfo] = useState(null);
     const [appUsage, setAppUsage] = useState([]);
@@ -29,14 +44,14 @@ function App() {
                 uptime: 0,
             });
             setAppUsage([
-                { app_name: 'Chrome', total_usage: 15 },
-                { app_name: 'Safari', total_usage: 8 },
-                { app_name: 'VS Code', total_usage: 12 },
-                { app_name: 'Terminal', total_usage: 5 },
+                { app_name: 'Chrome', total_usage_seconds: 900 }, // 15분
+                { app_name: 'Safari', total_usage_seconds: 480 }, // 8분
+                { app_name: 'VS Code', total_usage_seconds: 720 }, // 12분
+                { app_name: 'Terminal', total_usage_seconds: 300 }, // 5분
             ]);
             setDailyStats({
                 total_apps: 4,
-                total_usage_time: 40,
+                total_usage_seconds: 2400, // 40분
                 date: new Date().toISOString().split('T')[0],
             });
             setLoading(false);
@@ -143,8 +158,8 @@ function App() {
                                 <div className="stat-value">{dailyStats.total_apps || 0}개</div>
                             </div>
                             <div className="stat-card">
-                                <h3>총 사용 횟수</h3>
-                                <div className="stat-value">{dailyStats.total_usage_time || 0}회</div>
+                                <h3>총 사용 시간</h3>
+                                <div className="stat-value">{formatTime(dailyStats.total_usage_seconds || 0)}</div>
                             </div>
                         </div>
                     </section>
@@ -158,7 +173,7 @@ function App() {
                             {appUsage.map((app, index) => (
                                 <div key={index} className="app-item">
                                     <div className="app-name">{app.app_name}</div>
-                                    <div className="app-usage-count">{app.total_usage}회</div>
+                                    <div className="app-usage-count">{formatTime(app.total_usage_seconds || 0)}</div>
                                 </div>
                             ))}
                         </div>
