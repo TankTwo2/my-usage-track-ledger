@@ -16,6 +16,16 @@ class DatabaseManager {
 
     async init() {
         return new Promise((resolve, reject) => {
+            // 데이터베이스 파일이 존재하면 권한 확인
+            if (fs.existsSync(this.dbPath)) {
+                try {
+                    fs.chmodSync(this.dbPath, 0o666);
+                    console.log('데이터베이스 파일 권한 설정 완료');
+                } catch (error) {
+                    console.error('데이터베이스 파일 권한 설정 오류:', error);
+                }
+            }
+
             this.db = new sqlite3.Database(this.dbPath, (err) => {
                 if (err) {
                     console.error('데이터베이스 연결 오류:', err);
@@ -107,6 +117,12 @@ class DatabaseManager {
         try {
             console.log(`${appName} 앱 사용량 저장 시작: ${usageSeconds}초`);
 
+            // 데이터베이스 연결 확인
+            if (!this.db) {
+                console.error('데이터베이스가 연결되지 않았습니다.');
+                return;
+            }
+
             // 오늘 날짜의 앱 사용량 확인
             const today = new Date().toISOString().split('T')[0];
 
@@ -134,6 +150,15 @@ class DatabaseManager {
             console.log(`${appName} 앱 사용량 저장 완료`);
         } catch (error) {
             console.error(`${appName} 앱 사용량 저장 오류:`, error);
+            // 데이터베이스 파일 권한 재설정 시도
+            try {
+                if (fs.existsSync(this.dbPath)) {
+                    fs.chmodSync(this.dbPath, 0o666);
+                    console.log('데이터베이스 파일 권한 재설정 완료');
+                }
+            } catch (chmodError) {
+                console.error('데이터베이스 파일 권한 재설정 오류:', chmodError);
+            }
         }
     }
 
