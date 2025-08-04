@@ -8,13 +8,45 @@ function App() {
     const [appUsage, setAppUsage] = useState([]);
     const [dailyStats, setDailyStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isElectron, setIsElectron] = useState(false);
 
     useEffect(() => {
-        loadInitialData();
+        // Electron 환경인지 확인
+        const electronAvailable = !!window.electronAPI;
+        setIsElectron(electronAvailable);
+        console.log('Electron 환경:', electronAvailable);
+
+        if (electronAvailable) {
+            loadInitialData();
+        } else {
+            // 브라우저 환경에서는 테스트 데이터 표시
+            setSystemInfo({
+                message: '개발 모드 (브라우저)',
+                timestamp: new Date().toISOString(),
+                platform: 'browser',
+                arch: 'web',
+                hostname: 'localhost',
+                uptime: 0,
+            });
+            setAppUsage([
+                { app_name: 'Chrome', total_usage: 15 },
+                { app_name: 'Safari', total_usage: 8 },
+                { app_name: 'VS Code', total_usage: 12 },
+                { app_name: 'Terminal', total_usage: 5 },
+            ]);
+            setDailyStats({
+                total_apps: 4,
+                total_usage_time: 40,
+                date: new Date().toISOString().split('T')[0],
+            });
+            setLoading(false);
+        }
 
         // 실시간 업데이트 (5초마다)
         const interval = setInterval(() => {
-            updateAppUsage();
+            if (electronAvailable) {
+                updateAppUsage();
+            }
         }, 5000);
 
         return () => clearInterval(interval);
@@ -23,6 +55,13 @@ function App() {
     const loadInitialData = async () => {
         try {
             setLoading(true);
+
+            // window.electronAPI가 정의되지 않았을 때를 대비
+            if (!window.electronAPI) {
+                console.error('electronAPI가 정의되지 않았습니다.');
+                setLoading(false);
+                return;
+            }
 
             // 시스템 정보 로드
             const sysInfo = await window.electronAPI.getSystemInfo();
@@ -44,6 +83,10 @@ function App() {
 
     const updateAppUsage = async () => {
         try {
+            if (!window.electronAPI) {
+                return;
+            }
+
             const apps = await window.electronAPI.getAppUsage('today');
             setAppUsage(apps);
 
@@ -69,6 +112,9 @@ function App() {
             <header className="App-header">
                 <h1>Usage Tracker</h1>
                 <p>앱 사용량 모니터링</p>
+                {!isElectron && (
+                    <p style={{ color: 'orange', fontSize: '14px' }}>브라우저 모드 - Electron 앱에서 실행하세요</p>
+                )}
             </header>
 
             <main className="App-main">

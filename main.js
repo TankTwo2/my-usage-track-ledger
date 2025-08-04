@@ -1,12 +1,23 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const isDev = process.env.NODE_ENV === 'development';
+
+// 개발 모드 확인
+const isDev = process.env.NODE_ENV !== 'production' || process.env.ELECTRON_IS_DEV;
+console.log('개발 모드:', isDev);
+
+// 시스템 모니터링 모듈
+const SystemMonitor = require('./src/utils/SystemMonitor');
+const DatabaseManager = require('./src/utils/DatabaseManager');
 
 let mainWindow;
 let systemMonitor;
 let dbManager;
 
-async function createWindow() {
+function createWindow() {
+    const preloadPath = path.resolve(__dirname, 'preload.js');
+    console.log('Preload 스크립트 경로:', preloadPath);
+    console.log('현재 디렉토리:', __dirname);
+
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -14,7 +25,7 @@ async function createWindow() {
             nodeIntegration: false,
             contextIsolation: true,
             enableRemoteModule: false,
-            preload: path.join(__dirname, 'preload.js')
+            preload: preloadPath,
         },
         icon: path.join(__dirname, 'public/logo192.png'),
         title: 'Usage Tracker',
@@ -22,12 +33,39 @@ async function createWindow() {
 
     // 개발 모드에서는 localhost:3000, 프로덕션에서는 build 폴더
     const startUrl = isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, 'build/index.html')}`;
+    console.log('로딩할 URL:', startUrl);
 
-    mainWindow.loadURL(startUrl);
+    // React 앱 로딩 시도
+    mainWindow.loadURL(startUrl).catch((error) => {
+        console.error('URL 로딩 실패:', error);
+        // 실패 시 빈 페이지 로드
+        mainWindow.loadURL('data:text/html,<html><body><h1>로딩 중...</h1></body></html>');
+    });
 
     if (isDev) {
         mainWindow.webContents.openDevTools();
     }
+
+    // 페이지 로딩 완료 이벤트
+    mainWindow.webContents.on('did-finish-load', () => {
+        console.log('페이지 로딩 완료');
+    });
+
+    // 페이지 로딩 실패 이벤트
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        console.error('페이지 로딩 실패:', errorCode, errorDescription);
+        console.error('실패한 URL:', event.sender.getURL());
+    });
+
+    // DOM 준비 완료 이벤트
+    mainWindow.webContents.on('dom-ready', () => {
+        console.log('DOM 준비 완료');
+    });
+
+    // 콘솔 메시지 수신
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[Renderer] ${level}: ${message} (${sourceId}:${line})`);
+    });
 
     mainWindow.on('closed', () => {
         mainWindow = null;
@@ -36,10 +74,6 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
     try {
-        // 동적 import 사용
-        const { default: DatabaseManager } = await import('./src/utils/DatabaseManager.js');
-        const { default: SystemMonitor } = await import('./src/utils/SystemMonitor.js');
-
         // 데이터베이스 초기화
         dbManager = new DatabaseManager();
         await dbManager.init();
@@ -48,7 +82,7 @@ app.whenReady().then(async () => {
         systemMonitor = new SystemMonitor(dbManager);
         await systemMonitor.start();
 
-        await createWindow();
+        createWindow();
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {

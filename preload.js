@@ -1,15 +1,26 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+console.log('Preload 스크립트가 로드되었습니다.');
+
 // 렌더러 프로세스에서 사용할 API 노출
 contextBridge.exposeInMainWorld('electronAPI', {
     // 시스템 정보
-    getSystemInfo: () => ipcRenderer.invoke('getSystemInfo'),
+    getSystemInfo: () => {
+        console.log('getSystemInfo 호출됨');
+        return ipcRenderer.invoke('getSystemInfo');
+    },
 
     // 앱 사용량
-    getAppUsage: (period) => ipcRenderer.invoke('getAppUsage', period),
+    getAppUsage: (period) => {
+        console.log('getAppUsage 호출됨:', period);
+        return ipcRenderer.invoke('getAppUsage', period);
+    },
 
     // 일일 통계
-    getDailyStats: (period) => ipcRenderer.invoke('getDailyStats', period),
+    getDailyStats: (period) => {
+        console.log('getDailyStats 호출됨:', period);
+        return ipcRenderer.invoke('getDailyStats', period);
+    },
 
     // 설정 관리
     getSetting: (key) => ipcRenderer.invoke('get-setting', key),
@@ -32,3 +43,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.removeAllListeners(channel);
     },
 });
+
+console.log('electronAPI가 노출되었습니다.');
