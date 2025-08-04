@@ -1,7 +1,7 @@
 import type { CapacitorElectronConfig } from '@capacitor-community/electron';
 import { getCapacitorElectronConfig, setupElectronDeepLinking } from '@capacitor-community/electron';
 import type { MenuItemConstructorOptions } from 'electron';
-import { app, MenuItem } from 'electron';
+import { app, MenuItem, ipcMain } from 'electron';
 import electronIsDev from 'electron-is-dev';
 import unhandled from 'electron-unhandled';
 import { autoUpdater } from 'electron-updater';
@@ -68,3 +68,32 @@ app.on('activate', async function () {
 });
 
 // Place all ipc or other electron api calls and custom functionality under this line
+
+// IPC 핸들러들 추가
+ipcMain.handle('getSystemInfo', async () => {
+  return {
+    message: 'Electron 앱이 실행 중입니다',
+    timestamp: Date.now(),
+    platform: process.platform,
+    version: process.version
+  };
+});
+
+ipcMain.handle('getAppUsage', async (event, period = 'today') => {
+  // 임시 데이터 반환 (실제로는 데이터베이스에서 가져와야 함)
+  return [
+    { app_name: 'Chrome', total_usage: 15 },
+    { app_name: 'Safari', total_usage: 8 },
+    { app_name: 'VS Code', total_usage: 12 },
+    { app_name: 'Terminal', total_usage: 5 }
+  ];
+});
+
+ipcMain.handle('getDailyStats', async (event, period = 'today') => {
+  // 임시 데이터 반환 (실제로는 데이터베이스에서 가져와야 함)
+  return {
+    total_apps: 4,
+    total_usage_time: 40,
+    date: new Date().toISOString().split('T')[0]
+  };
+});
