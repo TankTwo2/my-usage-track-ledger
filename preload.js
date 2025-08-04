@@ -3,13 +3,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 // 렌더러 프로세스에서 사용할 API 노출
 contextBridge.exposeInMainWorld('electronAPI', {
     // 시스템 정보
-    getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
+    getSystemInfo: () => ipcRenderer.invoke('getSystemInfo'),
 
     // 앱 사용량
-    getAppUsage: (period) => ipcRenderer.invoke('get-app-usage', period),
+    getAppUsage: (period) => ipcRenderer.invoke('getAppUsage', period),
 
     // 일일 통계
-    getDailyStats: (period) => ipcRenderer.invoke('get-daily-stats', period),
+    getDailyStats: (period) => ipcRenderer.invoke('getDailyStats', period),
 
     // 설정 관리
     getSetting: (key) => ipcRenderer.invoke('get-setting', key),

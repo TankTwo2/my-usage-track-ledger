@@ -1,5 +1,3 @@
-const psList = require('ps-list');
-
 class SystemMonitor {
     constructor(dbManager) {
         this.dbManager = dbManager;
@@ -42,6 +40,8 @@ class SystemMonitor {
 
     async getActiveProcesses() {
         try {
+            // 동적 import 사용
+            const { default: psList } = await import('ps-list');
             const processes = await psList();
             return processes
                 .filter((proc) => proc.cmd && !proc.cmd.includes('node_modules') && !proc.cmd.includes('system'))

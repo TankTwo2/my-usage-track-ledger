@@ -62,16 +62,16 @@ app.on('window-all-closed', () => {
     }
 });
 
-// IPC 핸들러들
-ipcMain.handle('get-system-info', async () => {
+// IPC 핸들러들 - App.js에서 사용하는 이름과 일치
+ipcMain.handle('getSystemInfo', async () => {
     return await systemMonitor.getSystemInfo();
 });
 
-ipcMain.handle('get-app-usage', async (event, period = 'today') => {
+ipcMain.handle('getAppUsage', async (event, period = 'today') => {
     return await dbManager.getAppUsage(period);
 });
 
-ipcMain.handle('get-daily-stats', async (event, period = 'today') => {
+ipcMain.handle('getDailyStats', async (event, period = 'today') => {
     return await dbManager.getDailyStats(period);
 });
 
