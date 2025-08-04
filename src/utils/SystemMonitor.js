@@ -1,3 +1,8 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
 class SystemMonitor {
     constructor(dbManager) {
         this.dbManager = dbManager;
@@ -40,11 +45,24 @@ class SystemMonitor {
 
     async getActiveProcesses() {
         try {
-            // 동적 import 사용
-            const { default: psList } = await import('ps-list');
-            const processes = await psList();
-            return processes
-                .filter((proc) => proc.cmd && !proc.cmd.includes('node_modules') && !proc.cmd.includes('system'))
+            // Node.js 내장 모듈을 사용하여 프로세스 목록 가져오기
+            const { stdout } = await execAsync('ps -eo comm,pid,pcpu,pmem --no-headers');
+            const lines = stdout.trim().split('\n');
+            
+            return lines
+                .map(line => {
+                    const parts = line.trim().split(/\s+/);
+                    if (parts.length >= 1) {
+                        return {
+                            cmd: parts[0],
+                            pid: parts[1] || '',
+                            cpu: parts[2] || '0',
+                            mem: parts[3] || '0'
+                        };
+                    }
+                    return null;
+                })
+                .filter(proc => proc && proc.cmd && !proc.cmd.includes('node_modules') && !proc.cmd.includes('system'))
                 .slice(0, 20); // 상위 20개 프로세스만
         } catch (error) {
             console.error('프로세스 목록 수집 오류:', error);
