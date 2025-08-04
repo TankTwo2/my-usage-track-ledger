@@ -1,6 +1,4 @@
-const si = require('systeminformation');
 const psList = require('ps-list');
-const os = require('os');
 
 class SystemMonitor {
     constructor(dbManager) {
@@ -14,10 +12,10 @@ class SystemMonitor {
 
         this.isMonitoring = true;
         this.monitoringInterval = setInterval(async () => {
-            await this.collectSystemData();
-        }, 5000); // 5초마다 데이터 수집
+            await this.collectAppUsage();
+        }, 5000); // 5초마다 앱 사용량 수집
 
-        console.log('시스템 모니터링 시작됨');
+        console.log('앱 사용량 모니터링 시작됨');
     }
 
     async stop() {
@@ -26,107 +24,19 @@ class SystemMonitor {
             this.monitoringInterval = null;
         }
         this.isMonitoring = false;
-        console.log('시스템 모니터링 중지됨');
+        console.log('앱 사용량 모니터링 중지됨');
     }
 
-    async collectSystemData() {
+    async collectAppUsage() {
         try {
-            const timestamp = new Date().toISOString();
-
-            // CPU 사용률
-            const cpuUsage = await this.getCpuUsage();
-
-            // 메모리 사용률
-            const memoryUsage = await this.getMemoryUsage();
-
-            // 디스크 사용률
-            const diskUsage = await this.getDiskUsage();
-
-            // 네트워크 사용률
-            const networkUsage = await this.getNetworkUsage();
-
-            // 실행 중인 프로세스
+            // 실행 중인 프로세스 가져오기
             const processes = await this.getActiveProcesses();
-
-            // 데이터베이스에 저장
-            await this.dbManager.saveSystemData({
-                timestamp,
-                cpu: cpuUsage,
-                memory: memoryUsage,
-                disk: diskUsage,
-                network: networkUsage,
-                processes: processes.length,
-            });
-
+            
             // 앱별 사용 시간 업데이트
             await this.updateAppUsage(processes);
+            
         } catch (error) {
-            console.error('시스템 데이터 수집 오류:', error);
-        }
-    }
-
-    async getCpuUsage() {
-        try {
-            const cpu = await si.currentLoad();
-            return {
-                load: cpu.currentLoad,
-                cores: cpu.cpus.length,
-                temperature: cpu.temperature || null,
-            };
-        } catch (error) {
-            console.error('CPU 사용률 수집 오류:', error);
-            return { load: 0, cores: os.cpus().length, temperature: null };
-        }
-    }
-
-    async getMemoryUsage() {
-        try {
-            const mem = await si.mem();
-            const total = mem.total;
-            const used = mem.used;
-            const free = mem.free;
-
-            return {
-                total: total,
-                used: used,
-                free: free,
-                usagePercent: ((used / total) * 100).toFixed(2),
-            };
-        } catch (error) {
-            console.error('메모리 사용률 수집 오류:', error);
-            return { total: 0, used: 0, free: 0, usagePercent: 0 };
-        }
-    }
-
-    async getDiskUsage() {
-        try {
-            const disk = await si.fsSize();
-            return disk.map((fs) => ({
-                filesystem: fs.fs,
-                size: fs.size,
-                used: fs.used,
-                available: fs.available,
-                usagePercent: fs.use,
-            }));
-        } catch (error) {
-            console.error('디스크 사용률 수집 오류:', error);
-            return [];
-        }
-    }
-
-    async getNetworkUsage() {
-        try {
-            const network = await si.networkStats();
-            return network.map((net) => ({
-                interface: net.iface,
-                rxBytes: net.rx_bytes,
-                txBytes: net.tx_bytes,
-                rxSec: net.rx_sec,
-                txSec: net.tx_sec,
-            }));
-        } catch (error) {
-            console.error('네트워크 사용률 수집 오류:', error);
-            return [];
+            console.error('앱 사용량 수집 오류:', error);
         }
     }
 
@@ -182,6 +92,28 @@ class SystemMonitor {
             'terminal',
             'finder',
             'explorer',
+            'cursor',
+            'intellij',
+            'webstorm',
+            'pycharm',
+            'xcode',
+            'android studio',
+            'postman',
+            'notion',
+            'zoom',
+            'teams',
+            'skype',
+            'telegram',
+            'whatsapp',
+            'wechat',
+            'line',
+            'kakao',
+            'naver',
+            'daum',
+            'google',
+            'microsoft',
+            'apple',
+            'adobe'
         ];
 
         const lowerCmd = cmd.toLowerCase();
@@ -197,35 +129,10 @@ class SystemMonitor {
     }
 
     async getSystemInfo() {
-        try {
-            const [cpu, mem, disk, os] = await Promise.all([si.cpu(), si.mem(), si.diskLayout(), si.osInfo()]);
-
-            return {
-                os: {
-                    platform: os.platform,
-                    distro: os.distro,
-                    release: os.release,
-                    arch: os.arch,
-                },
-                cpu: {
-                    manufacturer: cpu.manufacturer,
-                    brand: cpu.brand,
-                    cores: cpu.cores,
-                    speed: cpu.speed,
-                },
-                memory: {
-                    total: mem.total,
-                },
-                disk: disk.map((d) => ({
-                    device: d.device,
-                    size: d.size,
-                    type: d.type,
-                })),
-            };
-        } catch (error) {
-            console.error('시스템 정보 수집 오류:', error);
-            return {};
-        }
+        return {
+            message: '앱 사용량 추적 모드',
+            timestamp: new Date().toISOString()
+        };
     }
 }
 

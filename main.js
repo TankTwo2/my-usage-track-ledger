@@ -67,20 +67,54 @@ ipcMain.handle('get-system-info', async () => {
     return await systemMonitor.getSystemInfo();
 });
 
-ipcMain.handle('get-usage-stats', async (event, period = 'today') => {
-    return await dbManager.getUsageStats(period);
-});
-
 ipcMain.handle('get-app-usage', async (event, period = 'today') => {
     return await dbManager.getAppUsage(period);
 });
 
-ipcMain.handle('get-cpu-usage', async () => {
-    return await systemMonitor.getCpuUsage();
+ipcMain.handle('get-daily-stats', async (event, period = 'today') => {
+    return await dbManager.getDailyStats(period);
 });
 
-ipcMain.handle('get-memory-usage', async () => {
-    return await systemMonitor.getMemoryUsage();
+// 설정 관리
+ipcMain.handle('get-setting', async (event, key) => {
+    return await dbManager.getSetting(key);
+});
+
+ipcMain.handle('set-setting', async (event, key, value) => {
+    return await dbManager.setSetting(key, value);
+});
+
+// 데이터 내보내기
+ipcMain.handle('export-data', async (event, format = 'json') => {
+    try {
+        const data = await dbManager.getAppUsage('month');
+        return { success: true, data, format };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+// 윈도우 제어
+ipcMain.handle('minimize-window', () => {
+    if (mainWindow) {
+        mainWindow.minimize();
+    }
+});
+
+ipcMain.handle('maximize-window', () => {
+    if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+        } else {
+            mainWindow.maximize();
+        }
+    }
+});
+
+ipcMain.handle('close-window', () => {
+    if (mainWindow) {
+        mainWindow.close();
+    }
 });
 
 // 앱 종료 시 정리

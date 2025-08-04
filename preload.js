@@ -1,13 +1,34 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// 렌더러 프로세스에서 사용할 수 있는 API를 노출
+// 렌더러 프로세스에서 사용할 API 노출
 contextBridge.exposeInMainWorld('electronAPI', {
-    // 시스템 정보 관련
+    // 시스템 정보
     getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
-    getCpuUsage: () => ipcRenderer.invoke('get-cpu-usage'),
-    getMemoryUsage: () => ipcRenderer.invoke('get-memory-usage'),
-    
-    // 사용량 통계 관련
-    getUsageStats: (period) => ipcRenderer.invoke('get-usage-stats', period),
+
+    // 앱 사용량
     getAppUsage: (period) => ipcRenderer.invoke('get-app-usage', period),
-}); 
+
+    // 일일 통계
+    getDailyStats: (period) => ipcRenderer.invoke('get-daily-stats', period),
+
+    // 설정 관리
+    getSetting: (key) => ipcRenderer.invoke('get-setting', key),
+    setSetting: (key, value) => ipcRenderer.invoke('set-setting', key, value),
+
+    // 데이터 내보내기
+    exportData: (format) => ipcRenderer.invoke('export-data', format),
+
+    // 앱 제어
+    minimize: () => ipcRenderer.invoke('minimize-window'),
+    maximize: () => ipcRenderer.invoke('maximize-window'),
+    close: () => ipcRenderer.invoke('close-window'),
+
+    // 이벤트 리스너
+    on: (channel, callback) => {
+        ipcRenderer.on(channel, (event, ...args) => callback(...args));
+    },
+
+    off: (channel) => {
+        ipcRenderer.removeAllListeners(channel);
+    },
+});

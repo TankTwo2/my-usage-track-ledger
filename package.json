@@ -12,14 +12,9 @@
         "react-scripts": "5.0.1",
         "web-vitals": "^2.1.4",
         "electron": "^28.0.0",
-        "systeminformation": "^5.21.0",
         "sqlite3": "^5.1.6",
-        "chart.js": "^4.4.0",
-        "react-chartjs-2": "^5.2.0",
-        "moment": "^2.29.4",
-        "lodash": "^4.17.21",
-        "electron-store": "^8.1.0",
-        "ps-list": "^8.1.1"
+        "ps-list": "^8.1.1",
+        "electron-store": "^8.1.0"
     },
     "scripts": {
         "start": "react-scripts start",

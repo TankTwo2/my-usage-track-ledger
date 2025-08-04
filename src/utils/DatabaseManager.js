@@ -30,54 +30,34 @@ class DatabaseManager {
 
     async createTables() {
         const tables = [
-            // 시스템 사용량 테이블
-            `CREATE TABLE IF NOT EXISTS system_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT NOT NULL,
-        cpu_load REAL,
-        cpu_cores INTEGER,
-        cpu_temperature REAL,
-        memory_total INTEGER,
-        memory_used INTEGER,
-        memory_free INTEGER,
-        memory_usage_percent REAL,
-        disk_data TEXT,
-        network_data TEXT,
-        process_count INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`,
-
             // 앱 사용량 테이블
             `CREATE TABLE IF NOT EXISTS app_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        app_name TEXT NOT NULL,
-        usage_count INTEGER DEFAULT 0,
-        usage_date DATE DEFAULT CURRENT_DATE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                app_name TEXT NOT NULL,
+                usage_count INTEGER DEFAULT 0,
+                usage_date DATE DEFAULT CURRENT_DATE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`,
 
             // 일일 통계 테이블
             `CREATE TABLE IF NOT EXISTS daily_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date DATE UNIQUE NOT NULL,
-        total_cpu_time REAL DEFAULT 0,
-        total_memory_usage REAL DEFAULT 0,
-        total_disk_usage REAL DEFAULT 0,
-        total_network_usage REAL DEFAULT 0,
-        app_count INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date DATE UNIQUE NOT NULL,
+                total_apps INTEGER DEFAULT 0,
+                total_usage_time INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`,
 
             // 설정 테이블
             `CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT UNIQUE NOT NULL,
-        value TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`
         ];
 
         for (const table of tables) {
@@ -123,32 +103,6 @@ class DatabaseManager {
         });
     }
 
-    async saveSystemData(data) {
-        const sql = `
-      INSERT INTO system_usage (
-        timestamp, cpu_load, cpu_cores, cpu_temperature,
-        memory_total, memory_used, memory_free, memory_usage_percent,
-        disk_data, network_data, process_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-        const params = [
-            data.timestamp,
-            data.cpu.load,
-            data.cpu.cores,
-            data.cpu.temperature,
-            data.memory.total,
-            data.memory.used,
-            data.memory.free,
-            data.memory.usagePercent,
-            JSON.stringify(data.disk),
-            JSON.stringify(data.network),
-            data.processes,
-        ];
-
-        await this.run(sql, params);
-    }
-
     async saveAppUsage(appName, usageCount) {
         // 오늘 날짜의 앱 사용량 확인
         const today = new Date().toISOString().split('T')[0];
@@ -174,38 +128,6 @@ class DatabaseManager {
         }
     }
 
-    async getUsageStats(period = 'today') {
-        let dateFilter = '';
-        const params = [];
-
-        switch (period) {
-            case 'today':
-                dateFilter = 'WHERE DATE(timestamp) = DATE("now")';
-                break;
-            case 'week':
-                dateFilter = 'WHERE DATE(timestamp) >= DATE("now", "-7 days")';
-                break;
-            case 'month':
-                dateFilter = 'WHERE DATE(timestamp) >= DATE("now", "-30 days")';
-                break;
-            default:
-                dateFilter = 'WHERE DATE(timestamp) = DATE("now")';
-        }
-
-        const sql = `
-      SELECT 
-        AVG(cpu_load) as avg_cpu,
-        AVG(memory_usage_percent) as avg_memory,
-        MAX(cpu_load) as max_cpu,
-        MAX(memory_usage_percent) as max_memory,
-        COUNT(*) as data_points
-      FROM system_usage 
-      ${dateFilter}
-    `;
-
-        return await this.get(sql, params);
-    }
-
     async getAppUsage(period = 'today') {
         let dateFilter = '';
         const params = [];
@@ -225,28 +147,47 @@ class DatabaseManager {
         }
 
         const sql = `
-      SELECT 
-        app_name,
-        SUM(usage_count) as total_usage,
-        COUNT(*) as days_used
-      FROM app_usage 
-      ${dateFilter}
-      GROUP BY app_name 
-      ORDER BY total_usage DESC 
-      LIMIT 10
-    `;
+            SELECT 
+                app_name,
+                SUM(usage_count) as total_usage,
+                COUNT(*) as days_used
+            FROM app_usage 
+            ${dateFilter}
+            GROUP BY app_name 
+            ORDER BY total_usage DESC 
+            LIMIT 20
+        `;
 
         return await this.all(sql, params);
     }
 
-    async getRecentSystemData(limit = 100) {
-        const sql = `
-      SELECT * FROM system_usage 
-      ORDER BY timestamp DESC 
-      LIMIT ?
-    `;
+    async getDailyStats(period = 'today') {
+        let dateFilter = '';
+        const params = [];
 
-        return await this.all(sql, [limit]);
+        switch (period) {
+            case 'today':
+                dateFilter = 'WHERE usage_date = DATE("now")';
+                break;
+            case 'week':
+                dateFilter = 'WHERE usage_date >= DATE("now", "-7 days")';
+                break;
+            case 'month':
+                dateFilter = 'WHERE usage_date >= DATE("now", "-30 days")';
+                break;
+            default:
+                dateFilter = 'WHERE usage_date = DATE("now")';
+        }
+
+        const sql = `
+            SELECT 
+                COUNT(DISTINCT app_name) as total_apps,
+                SUM(usage_count) as total_usage_time
+            FROM app_usage 
+            ${dateFilter}
+        `;
+
+        return await this.get(sql, params);
     }
 
     async getSetting(key) {

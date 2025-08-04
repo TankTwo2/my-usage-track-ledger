@@ -5,10 +5,8 @@ import './App.css';
 
 function App() {
     const [systemInfo, setSystemInfo] = useState(null);
-    const [usageStats, setUsageStats] = useState(null);
     const [appUsage, setAppUsage] = useState([]);
-    const [currentCpu, setCurrentCpu] = useState(0);
-    const [currentMemory, setCurrentMemory] = useState(0);
+    const [dailyStats, setDailyStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,7 +14,7 @@ function App() {
 
         // 실시간 업데이트 (5초마다)
         const interval = setInterval(() => {
-            updateCurrentStats();
+            updateAppUsage();
         }, 5000);
 
         return () => clearInterval(interval);
@@ -30,16 +28,13 @@ function App() {
             const sysInfo = await window.electronAPI.getSystemInfo();
             setSystemInfo(sysInfo);
 
-            // 사용량 통계 로드
-            const stats = await window.electronAPI.getUsageStats('today');
-            setUsageStats(stats);
-
             // 앱 사용량 로드
             const apps = await window.electronAPI.getAppUsage('today');
             setAppUsage(apps);
 
-            // 현재 CPU/메모리 사용률
-            await updateCurrentStats();
+            // 일일 통계 로드
+            const stats = await window.electronAPI.getDailyStats('today');
+            setDailyStats(stats);
         } catch (error) {
             console.error('데이터 로드 오류:', error);
         } finally {
@@ -47,31 +42,23 @@ function App() {
         }
     };
 
-    const updateCurrentStats = async () => {
+    const updateAppUsage = async () => {
         try {
-            const cpu = await window.electronAPI.getCpuUsage();
-            const memory = await window.electronAPI.getMemoryUsage();
+            const apps = await window.electronAPI.getAppUsage('today');
+            setAppUsage(apps);
 
-            setCurrentCpu(cpu.load);
-            setCurrentMemory(memory.usagePercent);
+            const stats = await window.electronAPI.getDailyStats('today');
+            setDailyStats(stats);
         } catch (error) {
-            console.error('실시간 통계 업데이트 오류:', error);
+            console.error('앱 사용량 업데이트 오류:', error);
         }
-    };
-
-    const formatBytes = (bytes) => {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
     if (loading) {
         return (
             <div className="App">
                 <div className="loading">
-                    <h2>시스템 정보를 로딩 중...</h2>
+                    <h2>앱 사용량 정보를 로딩 중...</h2>
                 </div>
             </div>
         );
@@ -81,70 +68,37 @@ function App() {
         <div className="App">
             <header className="App-header">
                 <h1>Usage Tracker</h1>
-                <p>시스템 사용량 모니터링</p>
+                <p>앱 사용량 모니터링</p>
             </header>
 
             <main className="App-main">
-                {/* 실시간 시스템 상태 */}
-                <section className="realtime-stats">
-                    <h2>실시간 시스템 상태</h2>
-                    <div className="stats-grid">
-                        <div className="stat-card">
-                            <h3>CPU 사용률</h3>
-                            <div className="stat-value">{currentCpu.toFixed(1)}%</div>
-                            <div className="stat-bar">
-                                <div className="stat-bar-fill" style={{ width: `${currentCpu}%` }}></div>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <h3>메모리 사용률</h3>
-                            <div className="stat-value">{currentMemory.toFixed(1)}%</div>
-                            <div className="stat-bar">
-                                <div className="stat-bar-fill" style={{ width: `${currentMemory}%` }}></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 {/* 시스템 정보 */}
                 {systemInfo && (
                     <section className="system-info">
                         <h2>시스템 정보</h2>
                         <div className="info-grid">
                             <div className="info-item">
-                                <strong>OS:</strong> {systemInfo.os?.platform} {systemInfo.os?.release}
+                                <strong>모드:</strong> {systemInfo.message}
                             </div>
                             <div className="info-item">
-                                <strong>CPU:</strong> {systemInfo.cpu?.brand} ({systemInfo.cpu?.cores} cores)
-                            </div>
-                            <div className="info-item">
-                                <strong>메모리:</strong> {formatBytes(systemInfo.memory?.total)}
+                                <strong>시작 시간:</strong> {new Date(systemInfo.timestamp).toLocaleString()}
                             </div>
                         </div>
                     </section>
                 )}
 
                 {/* 오늘 통계 */}
-                {usageStats && (
+                {dailyStats && (
                     <section className="daily-stats">
                         <h2>오늘 통계</h2>
                         <div className="stats-grid">
                             <div className="stat-card">
-                                <h3>평균 CPU</h3>
-                                <div className="stat-value">{usageStats.avg_cpu?.toFixed(1) || 0}%</div>
+                                <h3>사용한 앱 수</h3>
+                                <div className="stat-value">{dailyStats.total_apps || 0}개</div>
                             </div>
                             <div className="stat-card">
-                                <h3>최대 CPU</h3>
-                                <div className="stat-value">{usageStats.max_cpu?.toFixed(1) || 0}%</div>
-                            </div>
-                            <div className="stat-card">
-                                <h3>평균 메모리</h3>
-                                <div className="stat-value">{usageStats.avg_memory?.toFixed(1) || 0}%</div>
-                            </div>
-                            <div className="stat-card">
-                                <h3>데이터 포인트</h3>
-                                <div className="stat-value">{usageStats.data_points || 0}</div>
+                                <h3>총 사용 횟수</h3>
+                                <div className="stat-value">{dailyStats.total_usage_time || 0}회</div>
                             </div>
                         </div>
                     </section>
@@ -164,6 +118,16 @@ function App() {
                         </div>
                     </section>
                 )}
+
+                {/* 사용 안내 */}
+                <section className="usage-guide">
+                    <h2>사용 안내</h2>
+                    <div className="guide-content">
+                        <p>• 5초마다 자동으로 앱 사용량을 추적합니다</p>
+                        <p>• Chrome, Safari, VS Code 등 주요 앱을 자동 감지합니다</p>
+                        <p>• 데이터는 로컬에 안전하게 저장됩니다</p>
+                    </div>
+                </section>
             </main>
         </div>
     );
