@@ -45,16 +45,16 @@ app.whenReady().then(() => {
                 const usageData = {
                     app_name: appName,
                     platform: systemMonitor.platform,
-                    usage_seconds: 5,
+                    usage_seconds: 10,
                     timestamp: new Date().toISOString(),
                 };
 
-                console.log('사용량 데이터 전송:', usageData);
+                console.log('🚀 main.js - 사용량 데이터 전송:', usageData);
 
                 // 프론트엔드로 데이터 전송
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('usage-data-updated', usageData);
-                    console.log('데이터 전송 완료');
+                    console.log('✅ main.js - 데이터 전송 완료');
                 } else {
                     console.log('메인 윈도우가 없거나 파괴됨');
                 }
@@ -66,8 +66,13 @@ app.whenReady().then(() => {
         }
     };
 
-    // 5초마다 사용량 데이터 전송
-    systemMonitor.monitoringInterval = setInterval(sendUsageToFrontend, 5000);
+    // 10초마다 사용량 데이터 전송 (기존 interval 정리 후 새로 생성)
+    if (systemMonitor.monitoringInterval) {
+        console.log('🧹 기존 interval 정리:', systemMonitor.monitoringInterval);
+        clearInterval(systemMonitor.monitoringInterval);
+    }
+    systemMonitor.monitoringInterval = setInterval(sendUsageToFrontend, 10000);
+    console.log('⏰ 새로운 interval 생성:', systemMonitor.monitoringInterval, '- 10초 주기');
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

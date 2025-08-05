@@ -15,8 +15,7 @@ function App() {
     });
 
     const updateState = (updates) => setState((prev) => ({ ...prev, ...updates }));
-    const isListenerRegistered = useRef(false);
-    const currentHandler = useRef(null);
+    const lastProcessedTimestamp = useRef(null);
 
     // Electron API 확인 함수
     const checkElectronAPI = () => {
@@ -94,22 +93,48 @@ function App() {
 
     // 사용량 데이터 처리 함수를 useRef로 관리
     const handleUsageUpdate = useCallback((usageData) => {
-        console.log('사용량 데이터 수신:', usageData);
+        console.log('🔥 handleUsageUpdate 호출됨:', usageData);
+        console.log('🔥 호출 스택:', new Error().stack);
+        
+        // 중복 처리 방지: 같은 타임스탬프의 데이터는 무시
+        if (lastProcessedTimestamp.current === usageData.timestamp) {
+            console.log('❌ 중복된 타임스탬프 데이터 무시:', usageData.timestamp);
+            return;
+        }
+        lastProcessedTimestamp.current = usageData.timestamp;
+        console.log('✅ 데이터 처리 진행:', usageData.timestamp);
 
         setState((prev) => {
             console.log('setState 콜백 실행 - 이전 상태:', prev.appUsage);
+            
+            // Strict Mode에서 setState 콜백이 중복 실행되는 것을 방지
+            // 이미 같은 타임스탬프로 처리된 앱이 있는지 확인
+            const existingAppIndex = prev.appUsage.findIndex((app) => app.app_name === usageData.app_name);
+            
+            if (existingAppIndex >= 0) {
+                const existingApp = prev.appUsage[existingAppIndex];
+                // 마지막 업데이트 타임스탬프와 비교
+                if (existingApp.lastUpdated === usageData.timestamp) {
+                    console.log('❌ setState 중복 실행 방지:', usageData.timestamp);
+                    return prev; // 상태 변경 없음
+                }
+            }
 
             const newAppUsage = [...prev.appUsage];
-            const existingAppIndex = newAppUsage.findIndex((app) => app.app_name === usageData.app_name);
 
             if (existingAppIndex >= 0) {
-                newAppUsage[existingAppIndex].total_usage_seconds += usageData.usage_seconds;
+                newAppUsage[existingAppIndex] = {
+                    ...newAppUsage[existingAppIndex],
+                    total_usage_seconds: newAppUsage[existingAppIndex].total_usage_seconds + usageData.usage_seconds,
+                    lastUpdated: usageData.timestamp
+                };
                 console.log('기존 앱 업데이트:', newAppUsage[existingAppIndex]);
             } else {
                 newAppUsage.push({
                     app_name: usageData.app_name,
                     total_usage_seconds: usageData.usage_seconds,
                     platform: usageData.platform,
+                    lastUpdated: usageData.timestamp
                 });
                 console.log('새 앱 추가:', newAppUsage[newAppUsage.length - 1]);
             }
@@ -164,6 +189,29 @@ function App() {
             };
         });
     }, []);
+
+    // Electron 이벤트 리스너 등록/해제
+    useEffect(() => {
+        let wrappedCallback = null;
+        
+        if (window.electronAPI && typeof window.electronAPI.on === 'function') {
+            console.log('usage-data-updated 이벤트 리스너 등록 시도');
+            
+            // 기존 리스너 먼저 제거
+            window.electronAPI.off('usage-data-updated');
+            
+            // 이벤트 리스너 등록
+            wrappedCallback = window.electronAPI.on('usage-data-updated', handleUsageUpdate);
+            
+            // cleanup 함수
+            return () => {
+                console.log('usage-data-updated 이벤트 리스너 해제');
+                if (window.electronAPI && typeof window.electronAPI.off === 'function') {
+                    window.electronAPI.off('usage-data-updated', wrappedCallback);
+                }
+            };
+        }
+    }, [handleUsageUpdate]);
 
     // 초기 데이터 로드
     useEffect(() => {
@@ -276,7 +324,7 @@ function App() {
                 <section className="usage-guide">
                     <h2>사용 안내</h2>
                     <div className="guide-content">
-                        <p>• 5초마다 자동으로 앱 사용량을 추적합니다</p>
+                        <p>• 10초마다 자동으로 앱 사용량을 추적합니다</p>
                         <p>• Windows, macOS, Android 플랫폼별로 통계를 제공합니다</p>
                         <p>• 데이터는 URL에 자동으로 저장됩니다</p>
                         <p>• 새로고침해도 데이터가 유지됩니다</p>
@@ -296,7 +344,7 @@ function App() {
                                         const testData = {
                                             app_name: 'Chrome',
                                             platform: 'macos',
-                                            usage_seconds: 5,
+                                            usage_seconds: 10,
                                             timestamp: new Date().toISOString(),
                                         };
                                         console.log('테스트 데이터 전송:', testData);
