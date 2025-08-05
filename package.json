@@ -1,59 +1,74 @@
 {
-  "name": "my-usage-track-ledger",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-<<<<<<< HEAD
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-=======
-    "@capacitor-community/electron": "^5.0.1",
-    "@capacitor/cli": "^7.0.1",
-    "@capacitor/core": "^7.0.1",
-    "cra-template": "1.2.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^4.2.4"
-  },
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
->>>>>>> 2ca51f8 (init)
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-<<<<<<< HEAD
-=======
-  },
-  "devDependencies": {
-    "prettier": "3.4.2"
->>>>>>> 2ca51f8 (init)
-  }
+    "name": "my-usage-track-ledger",
+    "version": "0.1.0",
+    "private": true,
+    "main": "main.js",
+    "dependencies": {
+        "@testing-library/jest-dom": "^5.17.0",
+        "@testing-library/react": "^15.0.0",
+        "@testing-library/user-event": "^14.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "react-scripts": "5.0.1",
+        "web-vitals": "^2.1.4",
+        "electron": "^28.0.0",
+        "sqlite3": "^5.1.6",
+        "ps-list": "^8.1.1",
+        "electron-store": "^8.1.0"
+    },
+    "scripts": {
+        "start": "react-scripts start",
+        "build": "react-scripts build",
+        "test": "react-scripts test",
+        "eject": "react-scripts eject",
+        "electron": "electron .",
+        "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+        "electron-pack": "electron-builder",
+        "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+        "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app",
+            "react-app/jest"
+        ]
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2",
+        "wait-on": "^7.2.0",
+        "electron-builder": "^24.9.1"
+    },
+    "build": {
+        "appId": "com.usage-tracker.app",
+        "productName": "Usage Tracker",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "build/**/*",
+            "node_modules/**/*",
+            "main.js"
+        ],
+        "mac": {
+            "category": "public.app-category.productivity"
+        },
+        "win": {
+            "target": "nsis"
+        },
+        "linux": {
+            "target": "AppImage"
+        }
+    }
 }

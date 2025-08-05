@@ -1,0 +1,14 @@
+{
+    "analysis": {
+        "focus_on": ["src/App.js", "src/utils/DatabaseManager.js", "src/utils/SystemMonitor.js"],
+        "exclude_patterns": ["*.test.js", "*.spec.js", "setupTests.js", "reportWebVitals.js"],
+        "max_file_size_kb": 50,
+        "prefer_concise_responses": true,
+        "skip_style_analysis": true
+    },
+    "code_optimization": {
+        "remove_comments": true,
+        "minimize_whitespace": false,
+        "focus_on_functionality": true
+    }
+}

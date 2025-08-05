@@ -1,0 +1,134 @@
+# Dependencies and build artifacts
+node_modules/
+build/
+dist/
+coverage/
+
+# Package lock files (too large and not needed for analysis)
+package-lock.json
+**/package-lock.json
+
+# Generated files
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Test files (not needed for main functionality)
+**/setupTests.js
+**/App.test.js
+**/reportWebVitals.js
+**/*.test.js
+**/*.spec.js
+
+# Large binary files
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Data files
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Electron build artifacts
+electron/build/
+electron/dist/
+electron/node_modules/
+
+# Git files
+.git/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Documentation (if not needed for analysis)
+README.md
+*.md
+!commit_template.txt
+
+# Configuration files that are not critical for code analysis
+capacitor.config.ts
+**/capacitor.config.ts
+tsconfig.json
+**/tsconfig.json
+
+# CSS files (can be analyzed separately if needed)
+*.css
+**/*.css
+
+# Large utility files (analyze separately)
+src/utils/
+
+# Minified files (use original for analysis)
+*.min.js
+*.min.css
+
+# Electron specific files
+electron/src/
+electron/assets/
+electron/resources/
+
+# Public assets
+public/
+
+# All package files (too large)
+package.json
+**/package.json
+
+# All config files
+*.config.js
+*.config.json
+*.config.ts
+
+# All lock files
+yarn.lock
+**/yarn.lock
+
+# All log files
+*.log
+**/*.log
+
+# All cache files
+.cache/
+**/.cache/
+node_modules/.cache/
+
+# All build directories
+build/
+dist/
+**/build/
+**/dist/
+
+# All test directories
+__tests__/
+**/__tests__/
+test/
+**/test/
+tests/
+**/tests/ 
