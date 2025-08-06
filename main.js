@@ -1,16 +1,54 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const TrayService_1 = require("./src/services/TrayService");
 const UsageTracker_1 = require("./src/services/UsageTracker");
 const BackupService_1 = require("./src/services/BackupService");
+const dotenv = __importStar(require("dotenv"));
+// .env 파일 로드
+dotenv.config();
 // 글로벌 변수
 let trayService;
 let usageTracker;
 let backupService;
-// 설정
+// 설정 (환경변수에서 로드)
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GIST_ID = process.env.GIST_ID || '';
+const BACKUP_INTERVAL = parseInt(process.env.BACKUP_INTERVAL_MINUTES || '5');
+console.log(`🔧 설정 로드: GitHub Token ${GITHUB_TOKEN ? '✅' : '❌'}, Gist ID ${GIST_ID ? '✅' : '❌'}`);
 async function initializeApp() {
     // 독에서 앱 숨기기 (백그라운드 전용)
     electron_1.app.dock.hide();
@@ -35,9 +73,9 @@ async function loadInitialDataAndStart() {
         }
         // 모니터링 시작
         usageTracker.startTracking();
-        // 1분마다 자동 백업 (테스트용)
-        backupService.startAutoBackup(() => usageTracker.getCache(), 1);
-        // 나중에 5분으로 변경: backupService.startAutoBackup(() => usageTracker.getCache(), 5);
+        // 환경변수에서 설정된 간격으로 자동 백업
+        backupService.startAutoBackup(() => usageTracker.getCache(), BACKUP_INTERVAL);
+        console.log(`⏰ 자동 백업 설정: ${BACKUP_INTERVAL}분 주기`);
     }
     catch (error) {
         console.error('❌ 초기화 오류:', error);

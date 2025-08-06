@@ -2,15 +2,22 @@ import { app, BrowserWindow } from 'electron';
 import { TrayService } from './src/services/TrayService';
 import { UsageTracker } from './src/services/UsageTracker';
 import { BackupService } from './src/services/BackupService';
+import * as dotenv from 'dotenv';
+
+// .env 파일 로드
+dotenv.config();
 
 // 글로벌 변수
 let trayService: TrayService;
 let usageTracker: UsageTracker;
 let backupService: BackupService;
 
-// 설정
+// 설정 (환경변수에서 로드)
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GIST_ID = process.env.GIST_ID || '';
+const BACKUP_INTERVAL = parseInt(process.env.BACKUP_INTERVAL_MINUTES || '5');
+
+console.log(`🔧 설정 로드: GitHub Token ${GITHUB_TOKEN ? '✅' : '❌'}, Gist ID ${GIST_ID ? '✅' : '❌'}`);
 
 async function initializeApp(): Promise<void> {
   // 독에서 앱 숨기기 (백그라운드 전용)
@@ -44,9 +51,9 @@ async function loadInitialDataAndStart(): Promise<void> {
     // 모니터링 시작
     usageTracker.startTracking();
     
-    // 1분마다 자동 백업 (테스트용)
-    backupService.startAutoBackup(() => usageTracker.getCache(), 1);
-    // 나중에 5분으로 변경: backupService.startAutoBackup(() => usageTracker.getCache(), 5);
+    // 환경변수에서 설정된 간격으로 자동 백업
+    backupService.startAutoBackup(() => usageTracker.getCache(), BACKUP_INTERVAL);
+    console.log(`⏰ 자동 백업 설정: ${BACKUP_INTERVAL}분 주기`);
     
   } catch (error) {
     console.error('❌ 초기화 오류:', error);

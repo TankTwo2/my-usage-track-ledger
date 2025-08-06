@@ -8,15 +8,17 @@ class TrayService {
     }
     createTray() {
         try {
-            // 회색 배경에 흰색 "T" 16x16 PNG (정확한 base64)
-            const tIconData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAAGRJREFUOI2t0zEKwDAMQ9HXeBsP4Ck8hfd0G7d1C7du6xZu4RYu3MKt27qFW7iFW7iFW7iFWyiJCfInTizFlni7995778UY43zf913XdVVVVcaYEEIwxpgQ4q+B8zzvvRdCCGPM3wO4yg8h4wPaogAAAABJRU5ErkJggg==';
+            // 투명 배경에 흰색 "T" 16x16 PNG (정확한 base64)
+            const tIconData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAIElEQVR4nGNgGDTgP4mA+gbgcxXF3ho1YNQAigygCwAAY8evUW8RUBMAAAAASUVORK5CYII=';
             const icon = electron_1.nativeImage.createFromDataURL(tIconData);
             // 크기가 정상인지 확인
             if (icon.isEmpty() || icon.getSize().width === 0) {
                 throw new Error('T 아이콘 생성 실패');
             }
+            // macOS Template 이미지로 설정 (다크/라이트 모드 자동 적응)
+            icon.setTemplateImage(true);
             this.tray = new electron_1.Tray(icon);
-            console.log('✅ 회색 배경 "T" 아이콘으로 트레이 생성');
+            console.log('✅ 투명 배경 흰색 "T" Template 아이콘으로 트레이 생성');
         }
         catch (error) {
             try {
