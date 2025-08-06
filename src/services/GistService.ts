@@ -1,5 +1,5 @@
 import { GistBackup } from '../utils/GistBackup';
-import { AppState, CompressedData, GistBackupStatus } from '../types';
+import { AppState, CompressedData } from '../types';
 
 export class GistService {
   private gistBackup: GistBackup;

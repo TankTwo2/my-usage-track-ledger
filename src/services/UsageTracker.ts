@@ -1,5 +1,5 @@
 import { SystemMonitor } from '../utils/SystemMonitor';
-import { UsageSample, UsageCache, AppUsage, Platform } from '../types';
+import { UsageSample, UsageCache, Platform } from '../types';
 
 export class UsageTracker {
   private systemMonitor: SystemMonitor;

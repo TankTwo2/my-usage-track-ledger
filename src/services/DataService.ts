@@ -1,4 +1,4 @@
-import { CompressedData, AppState, DailyStats, PlatformStats } from '../types';
+import { CompressedData, AppState } from '../types';
 
 export class DataService {
   // 데이터 압축/해제 함수들

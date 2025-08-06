@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import './App.css';
 import TotalStats from './components/TotalStats';
 import PlatformStats from './components/PlatformStats';

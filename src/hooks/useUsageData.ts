@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { AppState, UsageDataUpdate, GistBackupStatus, AppUsage } from '../types';
+import { AppState, UsageDataUpdate } from '../types';
 import { DataService } from '../services/DataService';
 import { GistService } from '../services/GistService';
 
@@ -183,6 +183,10 @@ export const useUsageData = (
     try {
       updateState({ gistBackupStatus: 'backing-up' });
       const restoredData = await gistServiceRef.current.restoreFromGist();
+      
+      if (!restoredData) {
+        throw new Error('복원된 데이터가 없습니다');
+      }
       
       // 복원된 데이터로 상태 업데이트
       updateState({
