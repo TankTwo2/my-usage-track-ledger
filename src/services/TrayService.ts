@@ -1,12 +1,13 @@
 import { Tray, Menu, nativeImage, Notification, shell } from 'electron';
+import * as path from 'path';
 
 export class TrayService {
   private tray: Tray | null = null;
 
   public createTray(): void {
     try {
-      // 회색 배경에 흰색 "T" 16x16 PNG (정확한 base64)
-      const tIconData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAAGRJREFUOI2t0zEKwDAMQ9HXeBsP4Ck8hfd0G7d1C7du6xZu4RYu3MKt27qFW7iFW7iFW7iFWyiJCfInTizFlni7995778UY43zf913XdVVVVcaYEEIwxpgQ4q+B8zzvvRdCCGPM3wO4yg8h4wPaogAAAABJRU5ErkJggg==';
+      // 투명 배경에 흰색 "T" 16x16 PNG (정확한 base64)
+      const tIconData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAIElEQVR4nGNgGDTgP4mA+gbgcxXF3ho1YNQAigygCwAAY8evUW8RUBMAAAAASUVORK5CYII=';
       
       const icon = nativeImage.createFromDataURL(tIconData);
       
@@ -15,8 +16,11 @@ export class TrayService {
         throw new Error('T 아이콘 생성 실패');
       }
       
+      // macOS Template 이미지로 설정 (다크/라이트 모드 자동 적응)
+      icon.setTemplateImage(true);
+      
       this.tray = new Tray(icon);
-      console.log('✅ 회색 배경 "T" 아이콘으로 트레이 생성');
+      console.log('✅ 투명 배경 흰색 "T" Template 아이콘으로 트레이 생성');
       
     } catch (error) {
       try {
