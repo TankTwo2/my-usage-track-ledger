@@ -1,136 +1,103 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const SystemMonitor = require('./src/utils/SystemMonitor');
-
-let mainWindow;
-let systemMonitor;
-
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-
-function createWindow() {
-    mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-            preload: path.join(__dirname, 'preload.js'),
-        },
-        icon: path.join(__dirname, 'assets', 'appIcon.png'),
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const electron_1 = require("electron");
+const TrayService_1 = require("./src/services/TrayService");
+const UsageTracker_1 = require("./src/services/UsageTracker");
+const BackupService_1 = require("./src/services/BackupService");
+// 글로벌 변수
+let trayService;
+let usageTracker;
+let backupService;
+// 설정
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GIST_ID = process.env.GIST_ID || '';
+async function initializeApp() {
+    // 독에서 앱 숨기기 (백그라운드 전용)
+    electron_1.app.dock.hide();
+    // 서비스 초기화
+    trayService = new TrayService_1.TrayService();
+    usageTracker = new UsageTracker_1.UsageTracker();
+    backupService = new BackupService_1.BackupService(GITHUB_TOKEN, GIST_ID);
+    // 트레이 생성
+    trayService.createTray();
+    // 백업 서비스 상태 업데이트 콜백 설정
+    backupService.setStatusUpdateCallback((status) => {
+        trayService.updateMenu(status);
     });
-
-    if (isDev) {
-        mainWindow.loadURL('http://localhost:3000');
-        mainWindow.webContents.openDevTools();
-    } else {
-        mainWindow.loadFile(path.join(__dirname, 'build', 'index.html'));
-    }
-
-    mainWindow.on('closed', () => {
-        mainWindow = null;
-    });
+    // 초기 데이터 로드 후 모니터링 시작
+    await loadInitialDataAndStart();
 }
-
-app.whenReady().then(() => {
-    createWindow();
-
-    // 시스템 모니터 초기화
-    systemMonitor = new SystemMonitor();
-
-    // 사용량 데이터를 프론트엔드로 전송하는 함수
-    const sendUsageToFrontend = async () => {
-        try {
-            const appName = await systemMonitor.getFocusedApp();
-            if (appName && appName !== 'System Events') {
-                const usageData = {
-                    app_name: appName,
-                    platform: systemMonitor.platform,
-                    usage_seconds: 10,
-                    timestamp: new Date().toISOString(),
-                };
-
-                console.log('🚀 main.js - 사용량 데이터 전송:', usageData);
-
-                // 프론트엔드로 데이터 전송
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('usage-data-updated', usageData);
-                    console.log('✅ main.js - 데이터 전송 완료');
-                } else {
-                    console.log('메인 윈도우가 없거나 파괴됨');
-                }
-            } else {
-                console.log('포커스된 앱이 없거나 System Events임');
-            }
-        } catch (error) {
-            console.error('사용량 데이터 전송 오류:', error);
+async function loadInitialDataAndStart() {
+    try {
+        const initialData = await backupService.loadInitialData();
+        if (initialData) {
+            usageTracker.setCache(initialData);
         }
-    };
-
-    // 10초마다 사용량 데이터 전송 (기존 interval 정리 후 새로 생성)
-    if (systemMonitor.monitoringInterval) {
-        console.log('🧹 기존 interval 정리:', systemMonitor.monitoringInterval);
-        clearInterval(systemMonitor.monitoringInterval);
+        // 모니터링 시작
+        usageTracker.startTracking();
+        // 1분마다 자동 백업 (테스트용)
+        backupService.startAutoBackup(() => usageTracker.getCache(), 1);
+        // 나중에 5분으로 변경: backupService.startAutoBackup(() => usageTracker.getCache(), 5);
     }
-    systemMonitor.monitoringInterval = setInterval(sendUsageToFrontend, 10000);
-    console.log('⏰ 새로운 interval 생성:', systemMonitor.monitoringInterval, '- 10초 주기');
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
+    catch (error) {
+        console.error('❌ 초기화 오류:', error);
+    }
+}
+// 안전한 종료 처리
+async function gracefulShutdown(signal) {
+    if (signal) {
+        console.log(`\n🛑 ${signal} 신호 수신 - 안전한 종료 시작...`);
+    }
+    else {
+        console.log('🔄 앱 종료 - 버퍼 처리 및 정리 중...');
+    }
+    try {
+        // 버퍼에 남은 데이터 처리
+        if (usageTracker && usageTracker.hasBufferedData()) {
+            console.log(`💾 종료 전 ${usageTracker.getBufferSize()}개 샘플 처리 중...`);
+            usageTracker.processBuffer();
+            // 최종 백업
+            await backupService.performFinalBackup(usageTracker.getCache());
         }
-    });
+        // 서비스 정리
+        if (usageTracker) {
+            usageTracker.stopTracking();
+        }
+        if (backupService) {
+            backupService.stopAutoBackup();
+        }
+        if (trayService) {
+            trayService.destroy();
+        }
+        console.log('✅ 안전한 종료 완료');
+    }
+    catch (error) {
+        console.error('❌ 종료 처리 중 오류:', error);
+    }
+}
+// Electron 앱 이벤트 처리
+electron_1.app.whenReady().then(initializeApp);
+electron_1.app.on('activate', () => {
+    if (electron_1.BrowserWindow.getAllWindows().length === 0) {
+        // 백그라운드 앱이므로 윈도우 생성하지 않음
+    }
 });
-
-app.on('window-all-closed', () => {
+electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
-        app.quit();
+        electron_1.app.quit();
     }
 });
-
-// 앱 종료 시 정리
-app.on('before-quit', () => {
-    if (systemMonitor && systemMonitor.monitoringInterval) {
-        clearInterval(systemMonitor.monitoringInterval);
-    }
-});
-
-// IPC 핸들러들 - URL 기반 데이터 관리
-ipcMain.handle('getSystemInfo', async () => {
+// 앱 종료 시 안전한 정리
+electron_1.app.on('before-quit', async (event) => {
+    event.preventDefault();
     try {
-        return await systemMonitor.getSystemInfo();
-    } catch (error) {
-        console.error('시스템 정보 조회 오류:', error);
-        return null;
+        await gracefulShutdown();
+    }
+    finally {
+        electron_1.app.quit();
     }
 });
-
-ipcMain.handle('getAppUsage', async (event, period, platform) => {
-    try {
-        // URL 기반 데이터 관리를 위해 빈 배열 반환
-        // 실제 데이터는 프론트엔드에서 URL 파라미터로 관리
-        return [];
-    } catch (error) {
-        console.error('앱 사용량 조회 오류:', error);
-        return [];
-    }
-});
-
-ipcMain.handle('getDailyStats', async (event, period, platform) => {
-    try {
-        // URL 기반 데이터 관리를 위해 기본 통계 반환
-        return {
-            platform: platform || 'all',
-            total_apps: 0,
-            total_usage_seconds: 0,
-            date: new Date().toISOString().split('T')[0],
-        };
-    } catch (error) {
-        console.error('일일 통계 조회 오류:', error);
-        return {
-            platform: platform || 'all',
-            total_apps: 0,
-            total_usage_seconds: 0,
-            date: new Date().toISOString().split('T')[0],
-        };
-    }
-});
+// 시스템 신호 처리
+process.on('SIGINT', () => gracefulShutdown('SIGINT').then(() => process.exit(0)));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM').then(() => process.exit(0)));
+process.on('SIGHUP', () => gracefulShutdown('SIGHUP').then(() => process.exit(0)));
