@@ -83,3 +83,33 @@ export interface CompressedData {
     android: PlatformStats;
   };
 }
+
+// 일별 저장용 데이터 구조
+export interface DailyData {
+  date: string; // YYYY-MM-DD 형식
+  appUsage: AppUsage[];
+  dailyStats: DailyStats;
+  platformStats: {
+    windows: PlatformStats;
+    macos: PlatformStats;
+    android: PlatformStats;
+  };
+  createdAt: string; // ISO timestamp
+  lastUpdated: string; // ISO timestamp
+}
+
+// 로컬 저장소 메타데이터
+export interface LocalStorageMeta {
+  totalDays: number;
+  oldestDate: string;
+  newestDate: string;
+  lastBackupAttempt?: string;
+  lastSuccessfulBackup?: string;
+}
+
+// 데이터 병합을 위한 인터페이스
+export interface MergeResult {
+  merged: DailyData[];
+  conflicts: string[];
+  warnings: string[];
+}
