@@ -4,7 +4,8 @@ const DateRangePicker = ({ selectedPeriod, selectedDate, onPeriodChange, onDateC
     const periods = [
         { value: 'daily', label: '일별' },
         { value: 'weekly', label: '주별' },
-        { value: 'monthly', label: '월별' }
+        { value: 'monthly', label: '월별' },
+        { value: 'yearly', label: '연도별' }
     ];
 
     const formatDateForInput = (date) => {
@@ -33,6 +34,8 @@ const DateRangePicker = ({ selectedPeriod, selectedDate, onPeriodChange, onDateC
                     year: 'numeric',
                     month: 'long'
                 });
+            case 'yearly':
+                return `${date.getFullYear()}년`;
             default:
                 return '';
         }
@@ -72,6 +75,9 @@ const DateRangePicker = ({ selectedPeriod, selectedDate, onPeriodChange, onDateC
                                 case 'monthly':
                                     newDate.setMonth(newDate.getMonth() - 1);
                                     break;
+                                case 'yearly':
+                                    newDate.setFullYear(newDate.getFullYear() - 1);
+                                    break;
                                 default:
                                     // 기본값 처리
                                     break;
@@ -106,6 +112,9 @@ const DateRangePicker = ({ selectedPeriod, selectedDate, onPeriodChange, onDateC
                                 case 'monthly':
                                     newDate.setMonth(newDate.getMonth() + 1);
                                     break;
+                                case 'yearly':
+                                    newDate.setFullYear(newDate.getFullYear() + 1);
+                                    break;
                                 default:
                                     // 기본값 처리
                                     break;
@@ -130,6 +139,9 @@ const DateRangePicker = ({ selectedPeriod, selectedDate, onPeriodChange, onDateC
                                     break;
                                 case 'monthly':
                                     nextDate.setMonth(nextDate.getMonth() + 1);
+                                    break;
+                                case 'yearly':
+                                    nextDate.setFullYear(nextDate.getFullYear() + 1);
                                     break;
                                 default:
                                     // 기본값 처리

@@ -43,6 +43,9 @@ function App() {
       case 'monthly':
         filteredData = gistService.getMonthlyData(rawData, date);
         break;
+      case 'yearly':
+        filteredData = gistService.getYearlyData(rawData, date);
+        break;
       default:
         filteredData = rawData;
     }
@@ -50,7 +53,7 @@ function App() {
     updateState({ filteredData });
   }, [gistService]);
 
-  // 데이터 로드 함수
+  // 초기 데이터 로드 함수
   const loadData = useCallback(async () => {
     try {
       updateState({ loading: true, error: null });
@@ -77,7 +80,38 @@ function App() {
         error: error.message
       });
     }
-  }, [state.selectedPeriod, state.selectedDate, gistService, applyDateFilter]);
+  }, [gistService, applyDateFilter, state.selectedPeriod, state.selectedDate]);
+
+  // 자동 새로고침 전용 함수 (현재 선택 상태 보존)
+  const refreshData = useCallback(async () => {
+    try {
+      const rawData = await gistService.fetchGistData();
+      
+      if (!rawData) {
+        console.warn('자동 새로고침: Gist 데이터를 불러올 수 없습니다.');
+        return;
+      }
+
+      // 현재 상태를 유지하면서 데이터만 업데이트
+      setState(prevState => ({
+        ...prevState,
+        rawData,
+        lastUpdated: rawData.lastUpdated
+      }));
+
+      // 현재 선택된 기간 설정을 유지하여 필터 적용
+      setTimeout(() => {
+        setState(currentState => {
+          applyDateFilter(rawData, currentState.selectedPeriod, currentState.selectedDate);
+          return currentState;
+        });
+      }, 0);
+      
+    } catch (error) {
+      console.error('자동 새로고침 실패:', error);
+      // 자동 새로고침 실패는 조용히 처리
+    }
+  }, [gistService, applyDateFilter]);
 
   // 기간 변경 핸들러
   const handlePeriodChange = useCallback((newPeriod) => {
@@ -102,15 +136,15 @@ function App() {
     loadData();
   }, [loadData]);
 
-  // 5분마다 자동 새로고침
+  // 5분마다 자동 새로고침 (현재 선택 상태 보존)
   useEffect(() => {
     const interval = setInterval(() => {
-      console.log('🔄 자동 데이터 새로고침...');
-      loadData();
+      console.log('🔄 자동 데이터 새로고침 (기간 설정 보존)...');
+      refreshData();
     }, 5 * 60 * 1000); // 5분
 
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [refreshData]);
 
   const formatLastUpdated = (timestamp) => {
     if (!timestamp) return '';

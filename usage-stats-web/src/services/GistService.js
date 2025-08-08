@@ -157,6 +157,15 @@ class GistService {
     
     return this.filterDataByDateRange(data, startOfMonth.toISOString().split('T')[0], endOfMonth.toISOString().split('T')[0]);
   }
+
+  // 연도별 데이터 집계
+  getYearlyData(data, targetDate) {
+    const target = new Date(targetDate);
+    const startOfYear = new Date(target.getFullYear(), 0, 1); // 1월 1일
+    const endOfYear = new Date(target.getFullYear(), 11, 31); // 12월 31일
+    
+    return this.filterDataByDateRange(data, startOfYear.toISOString().split('T')[0], endOfYear.toISOString().split('T')[0]);
+  }
 }
 
 export default GistService;

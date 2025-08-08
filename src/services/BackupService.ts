@@ -1,4 +1,4 @@
-import { BackupData, UsageCache, DailyData } from '../types';
+import { BackupData, UsageCache, DailyData, PlatformStatsMap } from '../types';
 import { GistBackup } from '../utils/GistBackup';
 import { LocalStorageService } from './LocalStorageService';
 
@@ -251,7 +251,7 @@ export class BackupService {
     const totalUsageSeconds = mergedApps.reduce((sum, app) => sum + app.total_usage_seconds, 0);
 
     // 플랫폼별 통계 재계산
-    const platformStats = {
+    const platformStats: PlatformStatsMap = {
       windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
       macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
       android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
