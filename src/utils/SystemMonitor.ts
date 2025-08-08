@@ -35,8 +35,7 @@ export class SystemMonitor {
       if (this.platform === 'macos') {
         return await this.getMacOSFocusedApp();
       } else if (this.platform === 'windows') {
-        // Windows용 포커스된 앱 감지 (나중에 구현)
-        return 'Windows App';
+        return await this.getWindowsFocusedApp();
       } else {
         return 'Android App';
       }
@@ -209,5 +208,127 @@ export class SystemMonitor {
     }
     
     return processName;
+  }
+
+  private async getWindowsFocusedApp(): Promise<string | null> {
+    try {
+      // PowerShell을 사용하여 활성 창의 프로세스 정보 가져오기
+      const { stdout: activeWindow } = await execAsync(`
+        powershell -Command "
+        Add-Type -TypeDefinition '
+          using System;
+          using System.Diagnostics;
+          using System.Runtime.InteropServices;
+          using System.Text;
+          public class Win32 {
+            [DllImport(\\"user32.dll\\")]
+            public static extern IntPtr GetForegroundWindow();
+            [DllImport(\\"user32.dll\\")]
+            public static extern int GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+            [DllImport(\\"user32.dll\\")]
+            public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+          }
+        ';
+        $hwnd = [Win32]::GetForegroundWindow();
+        $processId = 0;
+        [Win32]::GetWindowThreadProcessId($hwnd, [ref]$processId);
+        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue;
+        $windowTitle = New-Object System.Text.StringBuilder 256;
+        [Win32]::GetWindowText($hwnd, $windowTitle, 256);
+        if ($process) {
+          Write-Output ($process.ProcessName + '|' + $process.MainWindowTitle + '|' + $windowTitle.ToString());
+        } else {
+          Write-Output 'Unknown|';
+        }
+        "
+      `, { timeout: 5000 });
+
+      const result = activeWindow.trim();
+      if (!result || result === 'Unknown|') {
+        return null;
+      }
+
+      const [processName, mainWindowTitle, actualWindowTitle] = result.split('|');
+      return this.getWindowsAppName(processName, mainWindowTitle || actualWindowTitle);
+    } catch (error) {
+      console.error('Windows 포커스 앱 감지 오류:', error);
+      
+      // PowerShell이 실패할 경우 간단한 tasklist 명령어 사용
+      try {
+        // 최근 활성화된 프로세스 목록에서 추정
+        const { stdout: processList } = await execAsync('tasklist /FO CSV | findstr /I "chrome firefox notepad code"');
+        if (processList) {
+          const lines = processList.split('\n');
+          if (lines.length > 0) {
+            const firstProcess = lines[0].split(',')[0].replace(/"/g, '');
+            return this.getWindowsAppName(firstProcess, '');
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Windows 폴백 감지도 실패:', fallbackError);
+      }
+      
+      return null;
+    }
+  }
+
+  private getWindowsAppName(processName: string, windowTitle: string): string {
+    // Windows 프로세스 이름을 앱 이름으로 매핑
+    const processMap: Record<string, string> = {
+      'chrome': 'Google Chrome',
+      'firefox': 'Mozilla Firefox',
+      'msedge': 'Microsoft Edge',
+      'explorer': 'File Explorer',
+      'notepad': 'Notepad',
+      'notepad++': 'Notepad++',
+      'Code': 'Visual Studio Code',
+      'devenv': 'Visual Studio',
+      'sublime_text': 'Sublime Text',
+      'atom': 'Atom',
+      'idea64': 'IntelliJ IDEA',
+      'webstorm64': 'WebStorm',
+      'slack': 'Slack',
+      'spotify': 'Spotify',
+      'discord': 'Discord',
+      'teams': 'Microsoft Teams',
+      'outlook': 'Microsoft Outlook',
+      'winword': 'Microsoft Word',
+      'excel': 'Microsoft Excel',
+      'powerpnt': 'Microsoft PowerPoint',
+      'photoshop': 'Adobe Photoshop',
+      'figma': 'Figma'
+    };
+
+    // 정확한 매칭을 위해 소문자로 비교
+    const lowerProcessName = processName.toLowerCase();
+    
+    // 직접 매핑
+    if (processMap[lowerProcessName]) {
+      return processMap[lowerProcessName];
+    }
+
+    // 부분 매칭
+    for (const [key, value] of Object.entries(processMap)) {
+      if (lowerProcessName.includes(key.toLowerCase()) || 
+          key.toLowerCase().includes(lowerProcessName)) {
+        return value;
+      }
+    }
+
+    // 윈도우 제목으로 추가 식별 시도
+    if (windowTitle) {
+      if (windowTitle.includes('Visual Studio Code')) {
+        return 'Visual Studio Code';
+      }
+      if (windowTitle.includes('Chrome')) {
+        return 'Google Chrome';
+      }
+      if (windowTitle.includes('Firefox')) {
+        return 'Mozilla Firefox';
+      }
+    }
+
+    // 프로세스 이름 정리 (.exe 제거 등)
+    return processName.replace('.exe', '').replace(/^\w/, c => c.toUpperCase());
   }
 }

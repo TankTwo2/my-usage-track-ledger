@@ -1,13 +1,14 @@
 {
     "name": "my-usage-track-ledger",
     "version": "0.1.0",
+    "description": "실시간 앱 사용량을 추적하고 분석하는 크로스 플랫폼 데스크톱 애플리케이션",
+    "author": "TankTwo2 <tanktwo2@example.com>",
     "private": true,
     "main": "main.js",
     "dependencies": {
         "@testing-library/jest-dom": "^5.17.0",
         "@testing-library/react": "^15.0.0",
         "@testing-library/user-event": "^14.0.0",
-        "electron": "^28.0.0",
         "electron-store": "^8.1.0",
         "ps-list": "^8.1.1",
         "react": "^19.0.0",
@@ -23,7 +24,13 @@
         "eject": "react-scripts eject",
         "electron": "electron .",
         "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
-        "electron-pack": "electron-builder",
+        "electron-pack": "npm run build && electron-builder",
+        "electron-pack-mac": "npm run build && electron-builder --mac",
+        "electron-pack-win": "npm run build && electron-builder --win",
+        "electron-pack-linux": "npm run build && electron-builder --linux",
+        "electron-dist": "npm run build && electron-builder --publish=never",
+        "electron-dist-all": "npm run build && electron-builder --mac --win --linux --publish=never",
+        "prepack": "npm run build",
         "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
         "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
     },
@@ -50,6 +57,7 @@
         "@types/react": "^18.3.23",
         "@types/react-dom": "^18.3.7",
         "concurrently": "^8.2.2",
+        "electron": "^28.0.0",
         "electron-builder": "^24.9.1",
         "typescript": "^5.9.2",
         "wait-on": "^7.2.0"
@@ -63,16 +71,73 @@
         "files": [
             "build/**/*",
             "node_modules/**/*",
-            "main.js"
+            "main.js",
+            "src/**/*",
+            "!src/**/*.ts",
+            "!**/*.map"
+        ],
+        "extraResources": [
+            {
+                "from": "resources/",
+                "to": "resources/",
+                "filter": ["**/*"]
+            }
         ],
         "mac": {
-            "category": "public.app-category.productivity"
+            "category": "public.app-category.productivity",
+            "icon": "assets/icon.icns",
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": ["x64", "arm64"]
+                },
+                {
+                    "target": "zip",
+                    "arch": ["x64", "arm64"]
+                }
+            ],
+            "hardenedRuntime": true,
+            "entitlements": "assets/entitlements.mac.plist",
+            "entitlementsInherit": "assets/entitlements.mac.plist"
         },
         "win": {
-            "target": "nsis"
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": ["x64"]
+                },
+                {
+                    "target": "portable",
+                    "arch": ["x64"]
+                }
+            ],
+            "icon": "assets/icon.ico",
+            "requestedExecutionLevel": "requireAdministrator"
         },
         "linux": {
-            "target": "AppImage"
+            "target": [
+                {
+                    "target": "AppImage",
+                    "arch": ["x64"]
+                },
+                {
+                    "target": "deb",
+                    "arch": ["x64"]
+                }
+            ],
+            "icon": "assets/icon.png",
+            "category": "Utility"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "TankTwo2",
+            "repo": "my-usage-track-ledger"
         }
     }
 }

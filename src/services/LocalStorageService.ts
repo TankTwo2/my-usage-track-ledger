@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { DailyData, LocalStorageMeta, UsageCache, MergeResult, AppUsage, Platform } from '../types';
+import { DailyData, LocalStorageMeta, UsageCache, MergeResult, AppUsage, Platform, PlatformStatsMap } from '../types';
 
 export class LocalStorageService {
   private dataDir: string;
@@ -247,7 +247,7 @@ export class LocalStorageService {
     const totalUsageSeconds = mergedApps.reduce((sum, app) => sum + app.total_usage_seconds, 0);
 
     // 플랫폼별 통계 재계산
-    const platformStats = {
+    const platformStats: PlatformStatsMap = {
       windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
       macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
       android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
@@ -273,7 +273,7 @@ export class LocalStorageService {
         date: data1.date
       },
       platformStats,
-      createdAt: data1.createdAt < data2.createdAt ? data1.createdAt : data2.createdAt,
+      createdAt: (data1.createdAt && data2.createdAt && data1.createdAt < data2.createdAt) ? data1.createdAt : data2.createdAt,
       lastUpdated: new Date().toISOString()
     };
   }
