@@ -7,12 +7,11 @@ on:
     types: [opened, synchronize, reopened]
   
   # Main 브랜치 병합 시: 전체 빌드 + 배포
-  push:
-    branches: [ main ]
-  
   # 릴리스 태그 시: 모든 플랫폼 빌드 + Release 생성
   push:
-    tags: [ 'v*' ]
+    branches: [ main, 'v*' ]
+  
+
   
   # 수동 실행 허용
   workflow_dispatch:
