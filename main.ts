@@ -11,6 +11,7 @@ dotenv.config();
 let trayService: TrayService;
 let usageTracker: UsageTracker;
 let backupService: BackupService;
+let isShuttingDown = false;
 
 // 설정 (환경변수에서 로드)
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
@@ -62,6 +63,13 @@ async function loadInitialDataAndStart(): Promise<void> {
 
 // 안전한 종료 처리
 async function gracefulShutdown(signal?: string): Promise<void> {
+  // 이미 종료 중이면 리턴
+  if (isShuttingDown) {
+    return;
+  }
+  
+  isShuttingDown = true;
+  
   if (signal) {
     console.log(`\n🛑 ${signal} 신호 수신 - 안전한 종료 시작...`);
   } else {
@@ -77,6 +85,8 @@ async function gracefulShutdown(signal?: string): Promise<void> {
       // 최종 백업
       await backupService.performFinalBackup(usageTracker.getCache());
     }
+    
+    console.log('🛑 사용량 추적 중지');
     
     // 서비스 정리
     if (usageTracker) {
@@ -115,12 +125,18 @@ app.on('window-all-closed', () => {
 
 // 앱 종료 시 안전한 정리
 app.on('before-quit', async (event) => {
+  // 이미 종료 중이면 그냥 진행
+  if (isShuttingDown) {
+    return;
+  }
+  
   event.preventDefault();
   
   try {
     await gracefulShutdown();
   } finally {
-    app.quit();
+    // app.quit() 대신 app.exit() 사용하여 완전 종료
+    app.exit(0);
   }
 });
 
