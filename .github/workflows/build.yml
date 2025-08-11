@@ -165,13 +165,26 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
+      - name: List downloaded files
+        run: |
+          echo "=== Downloaded artifacts ==="
+          find . -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" | sort
+          echo "=== File sizes ==="
+          find . -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" -exec ls -lh {} \;
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            macos-build/**/*
-            windows-build/**/*
-            linux-build/**/*
+            macos-build/*.dmg
+            macos-build/*.zip
+            macos-build/*.blockmap
+            windows-build/*.exe
+            windows-build/*.msi
+            windows-build/*.blockmap
+            linux-build/*.AppImage
+            linux-build/*.deb
+            linux-build/*.blockmap
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
