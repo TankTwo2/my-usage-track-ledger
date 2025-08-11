@@ -1,42 +1,9 @@
-import React from 'react';
-import { formatTime } from '../utils/formatTime';
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const jsx_runtime_1 = require("react/jsx-runtime");
+const formatTime_1 = require("../utils/formatTime");
 const TotalStats = ({ dailyStats, appUsage }) => {
     const filteredApps = appUsage?.filter((app) => app.total_usage_seconds > 0) || [];
-
-    return (
-        <section className="total-stats">
-            <h2>전체 통계</h2>
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <h3>사용한 앱 수</h3>
-                    <div className="stat-value">{dailyStats?.total_apps || 0}개</div>
-                </div>
-                <div className="stat-card">
-                    <h3>총 사용 시간</h3>
-                    <div className="stat-value">{formatTime(dailyStats?.total_usage_seconds || 0)}</div>
-                </div>
-            </div>
-
-            {filteredApps.length > 0 ? (
-                <div className="app-usage-section">
-                    <h3>앱별 사용량</h3>
-                    <div className="usage-list">
-                        {filteredApps.map((app, index) => (
-                            <div key={index} className="usage-item">
-                                <div className="app-name">{app.app_name}</div>
-                                <div className="usage-time">{formatTime(app.total_usage_seconds)}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <div className="no-data">
-                    <p>아직 사용량 데이터가 없습니다. 잠시 후 다시 확인해주세요.</p>
-                </div>
-            )}
-        </section>
-    );
+    return ((0, jsx_runtime_1.jsxs)("section", { className: "total-stats", children: [(0, jsx_runtime_1.jsx)("h2", { children: "\uC804\uCCB4 \uD1B5\uACC4" }), (0, jsx_runtime_1.jsxs)("div", { className: "stats-grid", children: [(0, jsx_runtime_1.jsxs)("div", { className: "stat-card", children: [(0, jsx_runtime_1.jsx)("h3", { children: "\uC0AC\uC6A9\uD55C \uC571 \uC218" }), (0, jsx_runtime_1.jsxs)("div", { className: "stat-value", children: [dailyStats?.total_apps || 0, "\uAC1C"] })] }), (0, jsx_runtime_1.jsxs)("div", { className: "stat-card", children: [(0, jsx_runtime_1.jsx)("h3", { children: "\uCD1D \uC0AC\uC6A9 \uC2DC\uAC04" }), (0, jsx_runtime_1.jsx)("div", { className: "stat-value", children: (0, formatTime_1.formatTime)(dailyStats?.total_usage_seconds || 0) })] })] }), filteredApps.length > 0 ? ((0, jsx_runtime_1.jsxs)("div", { className: "app-usage-section", children: [(0, jsx_runtime_1.jsx)("h3", { children: "\uC571\uBCC4 \uC0AC\uC6A9\uB7C9" }), (0, jsx_runtime_1.jsx)("div", { className: "usage-list", children: filteredApps.map((app, index) => ((0, jsx_runtime_1.jsxs)("div", { className: "usage-item", children: [(0, jsx_runtime_1.jsx)("div", { className: "app-name", children: app.app_name }), (0, jsx_runtime_1.jsx)("div", { className: "usage-time", children: (0, formatTime_1.formatTime)(app.total_usage_seconds) })] }, index))) })] })) : ((0, jsx_runtime_1.jsx)("div", { className: "no-data", children: (0, jsx_runtime_1.jsx)("p", { children: "\uC544\uC9C1 \uC0AC\uC6A9\uB7C9 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uD655\uC778\uD574\uC8FC\uC138\uC694." }) }))] }));
 };
-
-export default TotalStats;
+exports.default = TotalStats;

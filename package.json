@@ -6,12 +6,12 @@
     "private": true,
     "main": "main.js",
     "dependencies": {
+        "dotenv": "^16.4.5",
         "electron-store": "^8.1.0",
         "ps-list": "^8.1.1",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "react-scripts": "5.0.1",
-        "sqlite3": "^5.1.6",
         "web-vitals": "^2.1.4"
     },
     "scripts": {
@@ -63,6 +63,7 @@
     "build": {
         "appId": "com.usage-tracker.app",
         "productName": "Usage Tracker",
+        "extends": null,
         "directories": {
             "output": "dist"
         },
@@ -73,7 +74,8 @@
             "node_modules/**/*",
             "src/**/*.js",
             "!src/**/*.ts",
-            "!**/*.map"
+            "!**/*.map",
+            "!build/electron.js"
         ],
         "mac": {
             "category": "public.app-category.productivity",
