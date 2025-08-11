@@ -1,17 +1,11 @@
 name: Build and Release
 
 on:
-  # PR 생성/업데이트 시: 빌드 테스트만
-  pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened]
-  
-  # Main 브랜치 병합 시: 전체 빌드 + 배포
-  # 릴리스 태그 시: 모든 플랫폼 빌드 + Release 생성
-  push:
-    branches: [ main, 'v*' ]
-  
 
+  # Main 브랜치 푸시 (PR 병합) 또는 릴리스 태그 푸시
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
   
   # 수동 실행 허용
   workflow_dispatch:
@@ -52,8 +46,6 @@ jobs:
     name: Build Electron (macOS)
     runs-on: macos-latest
     needs: build-web
-    # PR에서는 실행하지 않고, main 브랜치나 태그에서만 실행
-    if: github.event_name != 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,8 +77,6 @@ jobs:
     name: Build Electron (Windows)
     runs-on: windows-latest
     needs: build-web
-    # PR에서는 실행하지 않고, main 브랜치나 태그에서만 실행
-    if: github.event_name != 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -116,8 +106,6 @@ jobs:
     name: Build Electron (Linux)
     runs-on: ubuntu-latest
     needs: build-web
-    # PR에서는 실행하지 않고, main 브랜치나 태그에서만 실행
-    if: github.event_name != 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -174,8 +162,8 @@ jobs:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
     needs: build-web
-    # main 브랜치에 푸시될 때만 배포
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # main 브랜치에 푸시될 때만 배포 (릴리스 태그에서는 배포하지 않음)
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       pages: write
