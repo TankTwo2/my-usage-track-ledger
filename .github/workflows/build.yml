@@ -24,6 +24,11 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -56,6 +61,11 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -87,6 +97,11 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -115,6 +130,11 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -177,6 +197,11 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install and build web dashboard
         run: |
