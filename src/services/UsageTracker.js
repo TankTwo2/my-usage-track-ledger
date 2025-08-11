@@ -73,13 +73,16 @@ class UsageTracker {
         // 앱별 사용 시간 계산 (샘플 개수 = 초 단위)
         const appUsageCount = {};
         this.usageBuffer.forEach(sample => {
-            if (!appUsageCount[sample.app_name]) {
-                appUsageCount[sample.app_name] = {
+            const appName = sample.app_name || sample.appName;
+            if (appName && !appUsageCount[appName]) {
+                appUsageCount[appName] = {
                     count: 0,
                     platform: sample.platform
                 };
             }
-            appUsageCount[sample.app_name].count++;
+            if (appName) {
+                appUsageCount[appName].count++;
+            }
         });
         // 캐시 업데이트
         Object.keys(appUsageCount).forEach(appName => {
@@ -90,9 +93,11 @@ class UsageTracker {
             }
             else {
                 this.usageCache.appUsage.push({
+                    name: appName,
                     app_name: appName,
                     total_usage_seconds: count,
                     platform: platform,
+                    last_active: new Date().toISOString(),
                     lastUpdated: new Date().toISOString()
                 });
             }
