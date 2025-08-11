@@ -1,0 +1,19 @@
+node_modules/
+build/
+dist/
+coverage/
+.nyc_output/
+*.min.js
+
+# Compiled JavaScript files from TypeScript
+src/**/*.js
+main.js
+preload.js
+
+# Specific compiled files
+src/App.js
+src/components/*.js
+src/hooks/*.js
+src/services/*.js
+src/utils/*.js
+src/types.js
