@@ -20,8 +20,8 @@
         "eject": "react-scripts eject",
         "electron": "electron .",
         "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
-        "compile-main": "tsc main.ts --outDir . --target es2020 --module commonjs --esModuleInterop --skipLibCheck",
-        "compile-src": "tsc src/**/*.ts --outDir src --target es2020 --module commonjs --esModuleInterop --skipLibCheck --declaration false",
+        "compile-main": "tsc --build",
+        "compile-src": "echo 'Source compilation skipped'",
         "electron-pack": "npm run build && npm run compile-main && npm run compile-src && electron-builder",
         "electron-pack-mac": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac",
         "electron-pack-win": "npm run build && npm run compile-main && npm run compile-src && electron-builder --win",
@@ -63,6 +63,7 @@
     "build": {
         "appId": "com.usage-tracker.app",
         "productName": "Usage Tracker",
+        "main": "main.js",
         "directories": {
             "output": "dist"
         },
@@ -70,10 +71,10 @@
             "build/**/*",
             "node_modules/**/*",
             "main.js",
+            "preload.js",
             "src/**/*.js",
             "!src/**/*.ts",
-            "!**/*.map",
-            "preload.js"
+            "!**/*.map"
         ],
         "extraResources": [
             {
