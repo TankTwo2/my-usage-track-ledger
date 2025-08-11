@@ -25,9 +25,8 @@
         "electron-pack": "npm run build && npm run compile-main && npm run compile-src && electron-builder --publish=never",
         "electron-pack-mac": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac --publish=never",
         "electron-pack-win": "npm run build && npm run compile-main && npm run compile-src && electron-builder --win --publish=never",
-        "electron-pack-linux": "npm run build && npm run compile-main && npm run compile-src && electron-builder --linux --publish=never",
         "electron-dist": "npm run build && npm run compile-main && npm run compile-src && electron-builder --publish=never",
-        "electron-dist-all": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac --win --linux --publish=never",
+        "electron-dist-all": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac --win --publish=never",
         "prepack": "npm run build && npm run compile-main && npm run compile-src",
         "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
         "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
@@ -107,20 +106,6 @@
             ],
             "icon": "assets/icon.ico",
             "requestedExecutionLevel": "requireAdministrator"
-        },
-        "linux": {
-            "target": [
-                {
-                    "target": "AppImage",
-                    "arch": ["x64"]
-                },
-                {
-                    "target": "deb",
-                    "arch": ["x64"]
-                }
-            ],
-            "icon": "assets/icon.png",
-            "category": "Utility"
         },
         "nsis": {
             "oneClick": false,
