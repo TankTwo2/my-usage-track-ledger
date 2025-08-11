@@ -6,9 +6,6 @@
     "private": true,
     "main": "main.js",
     "dependencies": {
-        "@testing-library/jest-dom": "^5.17.0",
-        "@testing-library/react": "^15.0.0",
-        "@testing-library/user-event": "^14.0.0",
         "electron-store": "^8.1.0",
         "ps-list": "^8.1.1",
         "react": "^19.0.0",
@@ -20,7 +17,6 @@
     "scripts": {
         "start": "react-scripts start",
         "build": "react-scripts build",
-        "test": "react-scripts test",
         "eject": "react-scripts eject",
         "electron": "electron .",
         "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
