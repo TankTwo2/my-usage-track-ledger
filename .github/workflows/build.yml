@@ -184,6 +184,9 @@ jobs:
     needs: build-web
     # main 브랜치에 푸시될 때만 배포 (릴리스 태그에서는 배포하지 않음)
     if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
