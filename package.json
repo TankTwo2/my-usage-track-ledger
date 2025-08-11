@@ -22,10 +22,10 @@
         "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
         "compile-main": "tsc --build",
         "compile-src": "echo 'Source compilation skipped'",
-        "electron-pack": "npm run build && npm run compile-main && npm run compile-src && electron-builder",
-        "electron-pack-mac": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac",
-        "electron-pack-win": "npm run build && npm run compile-main && npm run compile-src && electron-builder --win",
-        "electron-pack-linux": "npm run build && npm run compile-main && npm run compile-src && electron-builder --linux",
+        "electron-pack": "npm run build && npm run compile-main && npm run compile-src && electron-builder --publish=never",
+        "electron-pack-mac": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac --publish=never",
+        "electron-pack-win": "npm run build && npm run compile-main && npm run compile-src && electron-builder --win --publish=never",
+        "electron-pack-linux": "npm run build && npm run compile-main && npm run compile-src && electron-builder --linux --publish=never",
         "electron-dist": "npm run build && npm run compile-main && npm run compile-src && electron-builder --publish=never",
         "electron-dist-all": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac --win --linux --publish=never",
         "prepack": "npm run build && npm run compile-main && npm run compile-src",
@@ -127,11 +127,6 @@
             "allowToChangeInstallationDirectory": true,
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true
-        },
-        "publish": {
-            "provider": "github",
-            "owner": "TankTwo2",
-            "repo": "my-usage-track-ledger"
         }
     }
 }
