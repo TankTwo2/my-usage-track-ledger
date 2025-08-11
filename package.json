@@ -20,13 +20,15 @@
         "eject": "react-scripts eject",
         "electron": "electron .",
         "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
-        "electron-pack": "npm run build && electron-builder",
-        "electron-pack-mac": "npm run build && electron-builder --mac",
-        "electron-pack-win": "npm run build && electron-builder --win",
-        "electron-pack-linux": "npm run build && electron-builder --linux",
-        "electron-dist": "npm run build && electron-builder --publish=never",
-        "electron-dist-all": "npm run build && electron-builder --mac --win --linux --publish=never",
-        "prepack": "npm run build",
+        "compile-main": "tsc main.ts --outDir . --target es2020 --module commonjs --esModuleInterop --skipLibCheck",
+        "compile-src": "tsc src/**/*.ts --outDir src --target es2020 --module commonjs --esModuleInterop --skipLibCheck --declaration false",
+        "electron-pack": "npm run build && npm run compile-main && npm run compile-src && electron-builder",
+        "electron-pack-mac": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac",
+        "electron-pack-win": "npm run build && npm run compile-main && npm run compile-src && electron-builder --win",
+        "electron-pack-linux": "npm run build && npm run compile-main && npm run compile-src && electron-builder --linux",
+        "electron-dist": "npm run build && npm run compile-main && npm run compile-src && electron-builder --publish=never",
+        "electron-dist-all": "npm run build && npm run compile-main && npm run compile-src && electron-builder --mac --win --linux --publish=never",
+        "prepack": "npm run build && npm run compile-main && npm run compile-src",
         "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
         "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
     },
@@ -68,9 +70,10 @@
             "build/**/*",
             "node_modules/**/*",
             "main.js",
-            "src/**/*",
+            "src/**/*.js",
             "!src/**/*.ts",
-            "!**/*.map"
+            "!**/*.map",
+            "preload.js"
         ],
         "extraResources": [
             {
