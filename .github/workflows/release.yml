@@ -105,29 +105,25 @@ jobs:
           
           # macOS 빌드 (크로스 컴파일)
           npm run electron-pack-mac
-          mkdir -p macos-build && cp dist/*.dmg dist/*.zip dist/*.blockmap macos-build/ 2>/dev/null || true
+          mkdir -p macos-build && cp dist/*.dmg macos-build/ 2>/dev/null || true
           
           # Windows 빌드 (크로스 컴파일)
           npm run electron-pack-win  
-          mkdir -p windows-build && cp dist/*.exe dist/*.msi dist/*.blockmap windows-build/ 2>/dev/null || true
+          mkdir -p windows-build && cp dist/*.exe windows-build/ 2>/dev/null || true
 
       - name: List release files
         run: |
           echo "=== Release files ==="
-          find macos-build windows-build -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.msi" | sort
+          find macos-build windows-build -name "*.dmg" -o -name "*.exe" | sort
           echo "=== File sizes ==="
-          find macos-build windows-build -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.msi" -exec ls -lh {} \;
+          find macos-build windows-build -name "*.dmg" -o -name "*.exe" -exec ls -lh {} \;
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             macos-build/*.dmg
-            macos-build/*.zip
-            macos-build/*.blockmap
             windows-build/*.exe
-            windows-build/*.msi
-            windows-build/*.blockmap
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}

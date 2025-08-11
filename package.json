@@ -82,11 +82,7 @@
             "target": [
                 {
                     "target": "dmg",
-                    "arch": ["x64", "arm64"]
-                },
-                {
-                    "target": "zip",
-                    "arch": ["x64", "arm64"]
+                    "arch": ["universal"]
                 }
             ],
             "hardenedRuntime": true,
@@ -97,10 +93,6 @@
             "target": [
                 {
                     "target": "nsis",
-                    "arch": ["x64"]
-                },
-                {
-                    "target": "portable",
                     "arch": ["x64"]
                 }
             ],
