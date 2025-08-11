@@ -63,25 +63,17 @@
     "build": {
         "appId": "com.usage-tracker.app",
         "productName": "Usage Tracker",
-        "main": "main.js",
         "directories": {
             "output": "dist"
         },
         "files": [
-            "build/**/*",
-            "node_modules/**/*",
             "main.js",
             "preload.js",
+            "build/**/*",
+            "node_modules/**/*",
             "src/**/*.js",
             "!src/**/*.ts",
             "!**/*.map"
-        ],
-        "extraResources": [
-            {
-                "from": "resources/",
-                "to": "resources/",
-                "filter": ["**/*"]
-            }
         ],
         "mac": {
             "category": "public.app-category.productivity",
