@@ -6,6 +6,7 @@ export class UsageTracker {
   private usageBuffer: UsageSample[] = [];
   private usageCache: UsageCache;
   private samplingInterval: NodeJS.Timeout | null = null;
+  private appDetectedCallback?: (appName: string) => void;
 
   constructor() {
     this.systemMonitor = new SystemMonitor();
@@ -63,7 +64,12 @@ export class UsageTracker {
           timestamp: new Date().toISOString()
         });
         
-        // 자세한 로깅 (디버깅용)
+        // 트레이에 감지된 앱 정보 전달
+        if (this.appDetectedCallback) {
+          this.appDetectedCallback(appName);
+        }
+        
+        // 자세한 로깅 (디버깅용) - console.log를 log로 교체하면 됨
         console.log(`📊 샘플 수집: ${appName} [${this.usageBuffer.length}/10]`);
         
         // 10개가 모이면 즉시 처리
@@ -162,4 +168,7 @@ export class UsageTracker {
   public getBufferSize(): number {
     return this.usageBuffer.length;
   }
-}
+
+  public setAppDetectedCallback(callback: (appName: string) => void): void {
+    this.appDetectedCallback = callback;
+  }
