@@ -73,6 +73,7 @@
             "build/**/*",
             "node_modules/**/*",
             "src/**/*.js",
+            ".env",
             "!src/**/*.ts",
             "!**/*.map",
             "!build/electron.js"

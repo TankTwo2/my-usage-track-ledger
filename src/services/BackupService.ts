@@ -105,25 +105,33 @@ export class BackupService {
 
   public async performBackup(usageCache: UsageCache): Promise<void> {
     const backupTime = new Date().toLocaleTimeString();
+    console.log(`🔄 [BackupService] 백업 시작: ${backupTime}`);
+    console.log(`📊 [BackupService] 백업할 데이터:`, {
+      앱개수: usageCache.appUsage.length,
+      총사용시간: usageCache.dailyStats.total_usage_seconds + '초',
+      일일통계: usageCache.dailyStats
+    });
     
     // 항상 로컬에 저장
     try {
+      console.log('💾 [BackupService] 로컬 저장 시도...');
       await this.localStorage.saveDailyData(usageCache);
+      console.log('✅ [BackupService] 로컬 저장 완료');
     } catch (error) {
-      console.error('❌ 로컬 백업 실패:', error);
+      console.error('❌ [BackupService] 로컬 백업 실패:', error);
     }
 
     // Gist 백업 시도
     try {
       if (!this.isOnline) {
-        console.log('📴 오프라인 모드 - Gist 백업 스킵');
+        console.log('📴 [BackupService] 오프라인 모드 - Gist 백업 스킵');
         if (this.onStatusUpdate) {
           this.onStatusUpdate(`오프라인 - 로컬 저장됨: ${backupTime}`);
         }
         return;
       }
 
-      console.log('🔄 Gist 백업 시작...');
+      console.log('☁️ [BackupService] Gist 백업 시작...');
       
       const backupData: BackupData = {
         ...usageCache,
@@ -131,16 +139,18 @@ export class BackupService {
       };
       
       await this.gistBackup.backup(backupData);
-      console.log(`✅ Gist 백업 완료 - ${backupTime}`);
-      console.log(`📈 백업된 데이터: ${backupData.appUsage.length}개 앱, 총 사용시간 ${backupData.dailyStats.total_usage_seconds}초`);
+      console.log(`✅ [BackupService] Gist 백업 완료 - ${backupTime}`);
+      console.log(`📈 [BackupService] 백업된 데이터: ${backupData.appUsage.length}개 앱, 총 사용시간 ${backupData.dailyStats.total_usage_seconds}초`);
       
       // 백업 성공 표시
       await this.localStorage.markBackupSuccess();
       this.isOnline = true;
+      console.log('✅ [BackupService] 백업 성공 마크 완료');
       
       // 상태 업데이트 콜백 호출
       if (this.onStatusUpdate) {
         this.onStatusUpdate('마지막 백업: ' + backupTime);
+        console.log('📱 [BackupService] 트레이 상태 업데이트 완료');
       }
       
     } catch (error) {
@@ -168,43 +178,63 @@ export class BackupService {
   private async mergeGistAndLocalData(gistData: UsageCache, localData: DailyData[]): Promise<UsageCache> {
     try {
       console.log(`🔄 데이터 병합 중: Gist(${gistData.appUsage.length}개 앱) + 로컬(${localData.length}일치)`);
+      console.log(`⚠️ [CRITICAL] Gist 데이터 병합 로직 수정됨 - 과거 데이터 보존 모드`);
       
-      // Gist 데이터를 DailyData로 변환 (오늘 날짜로 가정)
+      // ⚠️ 중요: Gist 데이터를 무조건 "오늘"로 가정하지 않음
+      // 대신 로컬 데이터 우선 사용하고, Gist는 참고용으로만 활용
+      
       const today = new Date().toISOString().split('T')[0];
-      const gistAsDailyData: DailyData = {
-        date: today,
-        appUsage: gistData.appUsage,
-        dailyStats: gistData.dailyStats,
-        platformStats: gistData.platformStats,
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      };
-
-      // 모든 DailyData 병합 (오늘 날짜가 겹치면 병합)
-      const allDailyData = [...localData];
-      const todayLocalIndex = allDailyData.findIndex(data => data.date === today);
+      const todayLocalData = localData.find(data => data.date === today);
       
-      if (todayLocalIndex >= 0) {
-        // 오늘 날짜 데이터가 로컬에 있으면 병합
-        allDailyData[todayLocalIndex] = LocalStorageService.mergeDailyData(
-          allDailyData[todayLocalIndex],
-          gistAsDailyData
-        );
+      if (todayLocalData) {
+        // 오늘 로컬 데이터가 있으면, 그것을 우선 사용
+        console.log(`📅 [SAFE] 오늘(${today}) 로컬 데이터 우선 사용 - 과거 데이터 보존됨`);
+        console.log(`📊 [SAFE] 로컬 데이터: ${todayLocalData.appUsage.length}개 앱, ${todayLocalData.dailyStats.total_usage_seconds}초`);
+        
+        // 로컬의 오늘 데이터만 사용 (과거 데이터 건드리지 않음)
+        return {
+          appUsage: todayLocalData.appUsage,
+          dailyStats: todayLocalData.dailyStats,
+          platformStats: todayLocalData.platformStats
+        };
       } else {
-        // 오늘 날짜 데이터가 없으면 추가
-        allDailyData.push(gistAsDailyData);
+        // 오늘 로컬 데이터가 없는 경우에만 Gist 데이터 사용
+        console.log(`📅 [CAUTION] 오늘(${today}) 로컬 데이터 없음 - Gist에서 오늘치만 추출 시도`);
+        
+        // Gist 데이터가 실제로는 누적 데이터이므로, 신중하게 처리
+        // 일단 빈 상태로 시작하는 것이 안전
+        return {
+          appUsage: [],
+          dailyStats: {
+            total_apps: 0,
+            total_usage_seconds: 0,
+            date: today
+          },
+          platformStats: {
+            windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
+          }
+        };
       }
-
-      // DailyData 배열을 UsageCache로 변환
-      const mergedCache = this.convertDailyDataToUsageCache(allDailyData);
-      
-      console.log(`✅ 병합 완료: 총 ${mergedCache.appUsage.length}개 앱, ${mergedCache.dailyStats.total_usage_seconds}초`);
-      return mergedCache;
       
     } catch (error) {
       console.error('❌ 데이터 병합 실패:', error);
-      // 병합 실패 시 Gist 데이터 우선 사용
-      return gistData;
+      // 병합 실패 시 빈 캐시 반환 (안전)
+      const today = new Date().toISOString().split('T')[0];
+      return {
+        appUsage: [],
+        dailyStats: {
+          total_apps: 0,
+          total_usage_seconds: 0,
+          date: today
+        },
+        platformStats: {
+          windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
+        }
+      };
     }
   }
 
@@ -212,6 +242,8 @@ export class BackupService {
    * DailyData 배열을 UsageCache로 변환
    */
   private convertDailyDataToUsageCache(dailyDataArray: DailyData[]): UsageCache {
+    const today = new Date().toISOString().split('T')[0];
+    
     if (dailyDataArray.length === 0) {
       // 빈 캐시 반환
       return {
@@ -219,7 +251,7 @@ export class BackupService {
         dailyStats: {
           total_apps: 0,
           total_usage_seconds: 0,
-          date: new Date().toISOString().split('T')[0],
+          date: today,
         },
         platformStats: {
           windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
@@ -229,53 +261,34 @@ export class BackupService {
       };
     }
 
-    // 모든 앱 데이터 병합
-    const allApps = new Map<string, any>();
+    // 오늘 날짜의 데이터만 찾기
+    const todayData = dailyDataArray.find(data => data.date === today);
     
-    dailyDataArray.forEach(dailyData => {
-      dailyData.appUsage.forEach(app => {
-        const key = `${app.app_name}_${app.platform}`;
-        const existing = allApps.get(key);
-        
-        if (existing) {
-          existing.total_usage_seconds += app.total_usage_seconds;
-          existing.lastUpdated = app.lastUpdated > existing.lastUpdated ? 
-            app.lastUpdated : existing.lastUpdated;
-        } else {
-          allApps.set(key, { ...app });
-        }
-      });
-    });
-
-    const mergedApps = Array.from(allApps.values());
-    const totalUsageSeconds = mergedApps.reduce((sum, app) => sum + app.total_usage_seconds, 0);
-
-    // 플랫폼별 통계 재계산
-    const platformStats: PlatformStatsMap = {
-      windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-      macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-      android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
-    };
-
-    (['windows', 'macos', 'android'] as const).forEach(platform => {
-      const platformApps = mergedApps.filter(app => app.platform === platform);
-      platformStats[platform] = {
-        apps: platformApps,
-        stats: {
-          total_apps: platformApps.length,
-          total_usage_seconds: platformApps.reduce((sum, app) => sum + app.total_usage_seconds, 0)
+    if (!todayData) {
+      console.log(`📅 [BackupService] 오늘(${today}) 데이터 없음 - 빈 캐시 반환`);
+      // 오늘 데이터가 없으면 빈 캐시 반환
+      return {
+        appUsage: [],
+        dailyStats: {
+          total_apps: 0,
+          total_usage_seconds: 0,
+          date: today,
+        },
+        platformStats: {
+          windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
         }
       };
-    });
+    }
 
+    console.log(`📅 [BackupService] 오늘(${today}) 데이터 사용 - ${todayData.appUsage.length}개 앱, ${todayData.dailyStats.total_usage_seconds}초`);
+
+    // 오늘 데이터만 사용 (과거 데이터 누적하지 않음)
     return {
-      appUsage: mergedApps,
-      dailyStats: {
-        total_apps: mergedApps.length,
-        total_usage_seconds: totalUsageSeconds,
-        date: new Date().toISOString().split('T')[0],
-      },
-      platformStats
+      appUsage: todayData.appUsage,
+      dailyStats: todayData.dailyStats,
+      platformStats: todayData.platformStats
     };
   }
 
