@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  # 릴리스 태그 푸시 시에만 실행
+  push:
+    tags: [ 'v*' ]
+  
+  # 수동 실행 허용
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get latest build artifacts
+        id: get-artifacts
+        run: |
+          # GitHub API를 사용하여 main 브랜치의 최신 빌드 워크플로우 찾기
+          REPO="${{ github.repository }}"
+          BRANCH="main"
+          
+          # 최신 성공한 build 워크플로우 실행 찾기
+          BUILD_RUN=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$REPO/actions/workflows/build.yml/runs?branch=$BRANCH&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id')
+          
+          if [ "$BUILD_RUN" = "null" ] || [ -z "$BUILD_RUN" ]; then
+            echo "❌ No successful build found on main branch"
+            echo "build_found=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Found build run: $BUILD_RUN"
+            echo "build_found=true" >> $GITHUB_OUTPUT
+            echo "build_run_id=$BUILD_RUN" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifacts from latest build
+        if: steps.get-artifacts.outputs.build_found == 'true'
+        run: |
+          BUILD_RUN_ID="${{ steps.get-artifacts.outputs.build_run_id }}"
+          REPO="${{ github.repository }}"
+          
+          echo "📦 Downloading artifacts from build run: $BUILD_RUN_ID"
+          
+          # macOS 빌드 다운로드
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$REPO/actions/runs/$BUILD_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name == "macos-build") | .archive_download_url' | \
+            xargs -I {} gh api {} > macos-build.zip
+          
+          # Windows 빌드 다운로드
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$REPO/actions/runs/$BUILD_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name == "windows-build") | .archive_download_url' | \
+            xargs -I {} gh api {} > windows-build.zip
+          
+          # 압축 해제
+          unzip -o macos-build.zip -d macos-build/
+          unzip -o windows-build.zip -d windows-build/
+          
+          echo "📂 Downloaded artifacts:"
+          ls -la macos-build/ windows-build/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fallback build (if no artifacts found)
+        if: steps.get-artifacts.outputs.build_found == 'false'
+        run: |
+          echo "🔄 No recent artifacts found, performing fresh build..."
+          
+          # Node.js 설정
+          curl -fsSL https://nodejs.org/dist/v18.19.0/node-v18.19.0-linux-x64.tar.xz | tar -xJ
+          export PATH="$(pwd)/node-v18.19.0-linux-x64/bin:$PATH"
+          
+          # Python 설정
+          sudo apt-get update && sudo apt-get install -y python3.11 python3.11-dev
+          
+          # 의존성 설치
+          npm install --legacy-peer-deps
+          
+          # React 앱 빌드
+          npm run build
+          
+          # TypeScript 컴파일
+          npm run compile-main
+          
+          # macOS 빌드 (크로스 컴파일)
+          npm run electron-pack-mac
+          mkdir -p macos-build && cp dist/*.dmg macos-build/ 2>/dev/null || true
+          
+          # Windows 빌드 (크로스 컴파일)
+          npm run electron-pack-win  
+          mkdir -p windows-build && cp dist/*.exe windows-build/ 2>/dev/null || true
+
+      - name: List release files
+        run: |
+          echo "=== Release files ==="
+          find macos-build windows-build -name "*.dmg" -o -name "*.exe" | sort
+          echo "=== File sizes ==="
+          find macos-build windows-build -name "*.dmg" -o -name "*.exe" -exec ls -lh {} \;
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            macos-build/*.dmg
+            windows-build/*.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

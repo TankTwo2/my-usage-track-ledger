@@ -181,20 +181,63 @@ const useUsageData = (githubToken, gistId) => {
     // Electron 데이터 로드
     const loadElectronData = (0, react_1.useCallback)(async () => {
         try {
-            // Electron에서 실제 데이터를 가져오는 대신 URL에서 로드
-            const urlData = DataService_1.DataService.loadDataFromURL();
-            if (!urlData) {
-                // 초기 빈 데이터 설정
-                const initialData = DataService_1.DataService.createInitialState();
-                updateState(initialData);
-                DataService_1.DataService.saveDataToURL(initialData);
+            console.log('🔄 Electron에서 데이터 로드 시도...');
+            updateState({ loading: true });
+            const electronAPI = window.electronAPI;
+            if (electronAPI && typeof electronAPI.getAppUsage === 'function') {
+                console.log('📊 Electron API로 앱 사용량 요청');
+                // Electron에서 실제 앱 사용량 데이터 가져오기
+                const appData = await electronAPI.getAppUsage('today', 'all');
+                console.log('📊 Electron에서 받은 데이터:', appData);
+                if (appData && appData.appUsage) {
+                    updateState({
+                        appUsage: appData.appUsage || [],
+                        dailyStats: appData.dailyStats || {
+                            total_apps: 0,
+                            total_usage_seconds: 0,
+                            date: new Date().toISOString().split('T')[0],
+                        },
+                        platformStats: appData.platformStats || {
+                            windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                            macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                            android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                        },
+                        loading: false
+                    });
+                    // URL에도 저장 (브라우저 호환성)
+                    DataService_1.DataService.saveDataToURL(appData);
+                    console.log('✅ Electron 데이터 로드 완료');
+                }
+                else {
+                    console.log('📊 Electron에서 빈 데이터 수신 - 초기 상태로 설정');
+                    throw new Error('Electron에서 유효한 데이터를 받지 못했습니다');
+                }
+            }
+            else {
+                console.log('❌ Electron API 사용 불가 - URL 데이터로 폴백');
+                throw new Error('Electron API를 사용할 수 없습니다');
             }
         }
         catch (error) {
-            console.error('데이터 로드 오류:', error);
-        }
-        finally {
-            updateState({ loading: false });
+            console.error('❌ Electron 데이터 로드 오류:', error);
+            // 폴백: URL 데이터 또는 초기 데이터 사용
+            const urlData = DataService_1.DataService.loadDataFromURL();
+            if (urlData) {
+                console.log('🔄 URL 데이터로 폴백');
+                updateState({
+                    ...urlData,
+                    loading: false
+                });
+            }
+            else {
+                console.log('🔄 초기 빈 데이터로 설정');
+                const initialData = DataService_1.DataService.createInitialState();
+                updateState({
+                    ...initialData,
+                    loading: false
+                });
+                DataService_1.DataService.saveDataToURL(initialData);
+            }
         }
     }, [updateState]);
     // 브라우저 데이터 로드

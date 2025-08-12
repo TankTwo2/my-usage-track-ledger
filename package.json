@@ -7,6 +7,7 @@
     "main": "main.js",
     "dependencies": {
         "dotenv": "^16.4.5",
+        "electron-log": "^5.0.1",
         "electron-store": "^8.1.0",
         "ps-list": "^8.1.1",
         "react": "^19.0.0",
@@ -72,6 +73,7 @@
             "build/**/*",
             "node_modules/**/*",
             "src/**/*.js",
+            ".env",
             "!src/**/*.ts",
             "!**/*.map",
             "!build/electron.js"
@@ -82,11 +84,7 @@
             "target": [
                 {
                     "target": "dmg",
-                    "arch": ["x64", "arm64"]
-                },
-                {
-                    "target": "zip",
-                    "arch": ["x64", "arm64"]
+                    "arch": ["universal"]
                 }
             ],
             "hardenedRuntime": true,
@@ -97,10 +95,6 @@
             "target": [
                 {
                     "target": "nsis",
-                    "arch": ["x64"]
-                },
-                {
-                    "target": "portable",
                     "arch": ["x64"]
                 }
             ],

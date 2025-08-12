@@ -1,14 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { DailyData, LocalStorageMeta, UsageCache, MergeResult, AppUsage, Platform, PlatformStatsMap } from '../types';
 
 export class LocalStorageService {
   private dataDir: string;
   private metaFile: string;
 
-  constructor(dataDir: string = './data/local') {
-    this.dataDir = dataDir;
+  constructor(dataDir?: string) {
+    // 기본 경로를 ~/Documents/UsageTracker/data로 설정
+    this.dataDir = dataDir || path.join(os.homedir(), 'Documents', 'UsageTracker', 'data');
     this.metaFile = path.join(this.dataDir, 'meta.json');
+    
+    console.log(`📁 [LocalStorage] 데이터 저장 경로: ${this.dataDir}`);
     this.ensureDataDirectory();
   }
 
@@ -29,24 +33,71 @@ export class LocalStorageService {
   public async saveDailyData(usageCache: UsageCache): Promise<boolean> {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const dailyData: DailyData = {
-        date: today,
-        appUsage: usageCache.appUsage,
-        dailyStats: usageCache.dailyStats,
-        platformStats: usageCache.platformStats,
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      };
-
       const fileName = `${today}.json`;
       const filePath = path.join(this.dataDir, fileName);
       
-      fs.writeFileSync(filePath, JSON.stringify(dailyData, null, 2));
+      let finalDailyData: DailyData;
+      
+      // 기존 파일이 있는지 확인
+      if (fs.existsSync(filePath)) {
+        console.log(`🔄 [LocalStorage] 기존 ${fileName} 파일 발견 - 병합 모드`);
+        
+        try {
+          // 기존 데이터 로드
+          const existingContent = fs.readFileSync(filePath, 'utf8');
+          const existingData: DailyData = JSON.parse(existingContent);
+          
+          console.log(`📊 [LocalStorage] 기존 데이터: ${existingData.appUsage.length}개 앱, ${existingData.dailyStats.total_usage_seconds}초`);
+          console.log(`📊 [LocalStorage] 새 데이터: ${usageCache.appUsage.length}개 앱, ${usageCache.dailyStats.total_usage_seconds}초`);
+          
+          // 새 데이터를 DailyData 형식으로 변환
+          const newDailyData: DailyData = {
+            date: today,
+            appUsage: usageCache.appUsage,
+            dailyStats: usageCache.dailyStats,
+            platformStats: usageCache.platformStats,
+            createdAt: existingData.createdAt || new Date().toISOString(), // 기존 생성 시간 보존
+            lastUpdated: new Date().toISOString()
+          };
+          
+          // 기존 데이터와 새 데이터 병합
+          finalDailyData = LocalStorageService.mergeDailyData(existingData, newDailyData);
+          console.log(`✅ [LocalStorage] 데이터 병합 완료: ${finalDailyData.appUsage.length}개 앱, ${finalDailyData.dailyStats.total_usage_seconds}초`);
+          
+        } catch (parseError) {
+          console.error(`❌ [LocalStorage] 기존 파일 파싱 실패: ${parseError}`);
+          // 파싱 실패 시 새 데이터로 덮어쓰기
+          finalDailyData = {
+            date: today,
+            appUsage: usageCache.appUsage,
+            dailyStats: usageCache.dailyStats,
+            platformStats: usageCache.platformStats,
+            createdAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+          };
+        }
+      } else {
+        console.log(`📝 [LocalStorage] 새 ${fileName} 파일 생성`);
+        // 새 파일 생성
+        finalDailyData = {
+          date: today,
+          appUsage: usageCache.appUsage,
+          dailyStats: usageCache.dailyStats,
+          platformStats: usageCache.platformStats,
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      
+      // 파일 저장
+      fs.writeFileSync(filePath, JSON.stringify(finalDailyData, null, 2));
       
       // 메타데이터 업데이트
       await this.updateMeta();
       
-      console.log(`💾 로컬 데이터 저장 완료: ${fileName}`);
+      console.log(`💾 [LocalStorage] 데이터 저장 완료: ${fileName}`);
+      console.log(`📁 [LocalStorage] 저장 위치: ${filePath}`);
+      console.log(`📊 [LocalStorage] 최종 저장된 데이터: ${finalDailyData.appUsage.length}개 앱, ${finalDailyData.dailyStats.total_usage_seconds}초`);
       return true;
     } catch (error) {
       console.error('❌ 로컬 데이터 저장 실패:', error);

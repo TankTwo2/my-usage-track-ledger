@@ -6,6 +6,8 @@ export class UsageTracker {
   private usageBuffer: UsageSample[] = [];
   private usageCache: UsageCache;
   private samplingInterval: NodeJS.Timeout | null = null;
+  private appDetectedCallback?: (appName: string) => void;
+  private lastDetectedApp: string = ''; // 마지막으로 감지된 앱을 추적
 
   constructor() {
     this.systemMonitor = new SystemMonitor();
@@ -54,35 +56,52 @@ export class UsageTracker {
 
   private async sampleCurrentApp(): Promise<void> {
     try {
+      console.log('🔄 [UsageTracker] 샘플링 시작...');
       const appName = await this.systemMonitor.getFocusedApp();
+      console.log(`📱 [UsageTracker] 감지된 앱: ${appName || 'null'}`);
       
       if (appName && appName !== 'System Events') {
-        this.usageBuffer.push({
+        const sample = {
           app_name: appName,
           platform: this.systemMonitor.platform as Platform,
           timestamp: new Date().toISOString()
-        });
+        };
         
-        // 자세한 로깅 (디버깅용)
-        console.log(`📊 샘플 수집: ${appName} [${this.usageBuffer.length}/10]`);
+        this.usageBuffer.push(sample);
+        console.log(`💾 [UsageTracker] 샘플 추가됨: ${appName} (버퍼 크기: ${this.usageBuffer.length}/10)`);
+        
+        // 앱이 변경되었을 때만 트레이에 감지된 앱 정보 전달
+        if (this.lastDetectedApp !== appName) {
+          this.lastDetectedApp = appName;
+          if (this.appDetectedCallback) {
+            this.appDetectedCallback(appName);
+            console.log(`📢 [UsageTracker] 트레이에 앱 변경 알림: ${appName}`);
+          }
+          console.log(`🔄 앱 변경 감지: ${appName}`);
+        } else {
+          console.log(`✅ [UsageTracker] 동일한 앱 계속 사용 중: ${appName}`);
+        }
         
         // 10개가 모이면 즉시 처리
         if (this.usageBuffer.length >= 10) {
-          console.log('🎯 10개 샘플 완료 - 즉시 처리');
+          console.log('🎯 [UsageTracker] 10개 샘플 완료 - 즉시 처리');
           this.processBuffer();
         }
+      } else {
+        console.log('⚠️ [UsageTracker] 유효하지 않은 앱 또는 System Events');
       }
     } catch (error) {
-      console.error('❌ 앱 샘플링 오류:', error);
+      console.error('❌ [UsageTracker] 앱 샘플링 오류:', error);
     }
   }
 
   public processBuffer(): void {
     if (this.usageBuffer.length === 0) {
+      console.log('⚠️ [UsageTracker] processBuffer: 버퍼가 비어있음');
       return;
     }
     
-    console.log(`🔄 ${this.usageBuffer.length}개 샘플 처리 중...`);
+    console.log(`🔄 [UsageTracker] ${this.usageBuffer.length}개 샘플 처리 중...`);
     
     // 앱별 사용 시간 계산 (샘플 개수 = 초 단위)
     const appUsageCount: Record<string, { count: number; platform: Platform }> = {};
@@ -107,6 +126,8 @@ export class UsageTracker {
       
       if (existingAppIndex >= 0) {
         this.usageCache.appUsage[existingAppIndex].total_usage_seconds += count;
+        this.usageCache.appUsage[existingAppIndex].lastUpdated = new Date().toISOString();
+        this.usageCache.appUsage[existingAppIndex].last_active = new Date().toISOString();
       } else {
         this.usageCache.appUsage.push({
           name: appName,
@@ -119,14 +140,19 @@ export class UsageTracker {
       }
     });
     
+    console.log(`📈 [UsageTracker] 앱별 사용량 카운트:`, appUsageCount);
+    
     this.updateStats();
+    console.log('📊 [UsageTracker] 통계 업데이트 완료');
     
     // 버퍼 초기화
     this.usageBuffer = [];
+    console.log('🗑️ [UsageTracker] 버퍼 초기화 완료');
     
     // 처리 완료 로그
     if (this.usageCache.appUsage.length > 0) {
-      console.log(`📊 처리 완료 - 총 ${this.usageCache.appUsage.length}개 앱 추적중`);
+      console.log(`✅ [UsageTracker] 처리 완료 - 총 ${this.usageCache.appUsage.length}개 앱 추적중`);
+      console.log(`📊 [UsageTracker] 일일 통계:`, this.usageCache.dailyStats);
     }
   }
 
@@ -161,5 +187,9 @@ export class UsageTracker {
 
   public getBufferSize(): number {
     return this.usageBuffer.length;
+  }
+
+  public setAppDetectedCallback(callback: (appName: string) => void): void {
+    this.appDetectedCallback = callback;
   }
 }

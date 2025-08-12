@@ -1,11 +1,9 @@
-name: Build and Release
+name: Build
 
 on:
-
-  # Main 브랜치 푸시 (PR 병합) 또는 릴리스 태그 푸시
+  # Main 브랜치 푸시 (PR 병합) 시에만 빌드
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
   
   # 수동 실행 허용
   workflow_dispatch:
@@ -117,42 +115,6 @@ jobs:
           name: windows-build
           path: dist/
 
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: [build-electron-macos, build-electron-windows]
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-
-      - name: List downloaded files
-        run: |
-          echo "=== Downloaded artifacts ==="
-          find . -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" | sort
-          echo "=== File sizes ==="
-          find . -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" -exec ls -lh {} \;
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            macos-build/*.dmg
-            macos-build/*.zip
-            macos-build/*.blockmap
-            windows-build/*.exe
-            windows-build/*.msi
-            windows-build/*.blockmap
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-pages:
     name: Deploy to GitHub Pages
