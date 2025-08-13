@@ -33,11 +33,17 @@ jobs:
       - name: Build React app
         run: npm run build
 
+      - name: Build web dashboard
+        run: |
+          cd usage-stats-web
+          npm install --legacy-peer-deps
+          npm run build
+
       - name: Upload web artifacts
         uses: actions/upload-artifact@v4
         with:
           name: web-build
-          path: build/
+          path: usage-stats-web/build/
 
   build-electron-macos:
     name: Build Electron (macOS)
@@ -138,8 +144,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install and build React app
+      - name: Install and build web dashboard
         run: |
+          cd usage-stats-web
           npm install --legacy-peer-deps
           npm run build
 
@@ -149,7 +156,7 @@ jobs:
       - name: Upload to Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build
+          path: usage-stats-web/build
 
       - name: Deploy to Pages
         id: deployment
