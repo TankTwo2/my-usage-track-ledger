@@ -98,6 +98,19 @@ export interface DailyData {
   lastUpdated: string; // ISO timestamp
 }
 
+// Gist에 저장되는 날짜별 구조화된 데이터
+export interface StructuredGistData {
+  [date: string]: DailyData | StructuredGistMetadata; // 키는 YYYY-MM-DD 형식 또는 'metadata'
+  metadata: StructuredGistMetadata;
+}
+
+export interface StructuredGistMetadata {
+  lastUpdated: string;
+  totalDays: number;
+  oldestDate?: string;
+  newestDate?: string;
+}
+
 // 로컬 저장소 메타데이터
 export interface LocalStorageMeta {
   totalDays: number;
