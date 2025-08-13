@@ -3,6 +3,7 @@
     "version": "0.1.0",
     "description": "실시간 앱 사용량을 추적하고 분석하는 크로스 플랫폼 데스크톱 애플리케이션",
     "author": "TankTwo2 <tanktwo2@example.com>",
+    "homepage": "https://tanktwo2.github.io/my-usage-track-ledger",
     "private": true,
     "main": "main.js",
     "dependencies": {
