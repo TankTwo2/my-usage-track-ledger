@@ -47,9 +47,42 @@ class GistService {
   }
 
   transformGistData(gistContent) {
-    // Gist에서 이미 올바른 구조로 되어 있는 경우 그대로 사용
+    // 1. 구조화된 Gist 데이터 처리 (날짜별 구조)
+    if (gistContent.metadata && typeof gistContent.metadata === 'object') {
+      console.log('🏗️ 구조화된 Gist 데이터 감지됨');
+      const today = new Date().toISOString().split('T')[0];
+      const todayData = gistContent[today];
+      
+      if (todayData && todayData.appUsage) {
+        console.log(`✅ 구조화된 Gist에서 오늘(${today}) 데이터 로드 성공`);
+        return {
+          appUsage: todayData.appUsage,
+          dailyStats: todayData.dailyStats,
+          platformStats: todayData.platformStats,
+          lastUpdated: gistContent.metadata.lastUpdated || new Date().toISOString()
+        };
+      } else {
+        console.log(`📋 구조화된 Gist에 오늘(${today}) 데이터 없음 - 빈 상태 반환`);
+        return {
+          appUsage: [],
+          dailyStats: {
+            total_apps: 0,
+            total_usage_seconds: 0,
+            date: today
+          },
+          platformStats: {
+            windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
+          },
+          lastUpdated: gistContent.metadata.lastUpdated || new Date().toISOString()
+        };
+      }
+    }
+    
+    // 2. 기존 평면 구조 데이터 처리 (하위 호환성)
     if (gistContent.appUsage && gistContent.dailyStats && gistContent.platformStats) {
-      console.log('✅ Gist 데이터가 이미 올바른 구조입니다.');
+      console.log('✅ 기존 평면 구조 Gist 데이터 처리');
       return {
         appUsage: gistContent.appUsage,
         dailyStats: gistContent.dailyStats,
