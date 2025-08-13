@@ -33,17 +33,11 @@ jobs:
       - name: Build React app
         run: npm run build
 
-      - name: Build web dashboard
-        run: |
-          cd usage-stats-web
-          npm install --legacy-peer-deps
-          npm run build
-
       - name: Upload web artifacts
         uses: actions/upload-artifact@v4
         with:
           name: web-build
-          path: usage-stats-web/build/
+          path: build/
 
   build-electron-macos:
     name: Build Electron (macOS)
@@ -119,7 +113,6 @@ jobs:
   deploy-pages:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    needs: build-web
     # main 브랜치에 푸시될 때만 배포 (릴리스 태그에서는 배포하지 않음)
     if: github.ref == 'refs/heads/main'
     environment:
@@ -137,14 +130,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install and build web dashboard
+      - name: Install and build usage-stats-web
         run: |
           cd usage-stats-web
           npm install --legacy-peer-deps
