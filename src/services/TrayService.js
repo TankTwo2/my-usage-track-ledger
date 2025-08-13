@@ -37,6 +37,7 @@ class TrayService {
         this.currentStatus = '트래킹 중...';
         this.lastDetectedApp = '없음';
         this.startTime = new Date();
+        this.lastMenuHash = ''; // 메뉴 중복 업데이트 방지용
     }
     createTray() {
         try {
@@ -78,7 +79,15 @@ class TrayService {
     setupContextMenu() {
         if (!this.tray)
             return;
-        const uptime = Math.floor((Date.now() - this.startTime.getTime()) / 1000 / 60); // 분 단위
+        // 실행 시간을 시간 단위로 계산하여 업데이트 빈도 줄이기
+        const uptimeHours = Math.floor((Date.now() - this.startTime.getTime()) / 1000 / 60 / 60);
+        const uptimeDisplay = uptimeHours >= 1 ? `${uptimeHours}시간` : '실행 중';
+        // 메뉴 내용 해시 생성하여 중복 업데이트 방지
+        const menuContent = `${this.currentStatus}|${uptimeDisplay}|${this.lastDetectedApp}`;
+        if (menuContent === this.lastMenuHash) {
+            return; // 내용이 같으면 업데이트 건너뜀
+        }
+        this.lastMenuHash = menuContent;
         const contextMenu = electron_1.Menu.buildFromTemplate([
             {
                 label: 'Usage Tracker',
@@ -92,7 +101,7 @@ class TrayService {
                 enabled: false
             },
             {
-                label: `실행 시간: ${uptime}분`,
+                label: `실행 상태: ${uptimeDisplay}`,
                 enabled: false
             },
             {
@@ -140,8 +149,8 @@ class TrayService {
             }
         ]);
         this.tray.setContextMenu(contextMenu);
-        this.tray.setToolTip(`Usage Tracker - 실행 중 (${uptime}분)`);
-        log.info('📱 시스템 트레이 메뉴 업데이트됨');
+        this.tray.setToolTip(`Usage Tracker - ${uptimeDisplay}`);
+        log.debug('📱 시스템 트레이 메뉴 업데이트됨');
     }
     showStartupNotification() {
         if (electron_1.Notification.isSupported()) {
