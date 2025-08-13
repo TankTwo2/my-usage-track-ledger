@@ -173,69 +173,66 @@ export class BackupService {
   }
 
   /**
-   * Gist 데이터와 로컬 데이터 병합
+   * Gist 데이터와 로컬 데이터 병합 - 날짜별 분리 처리
    */
   private async mergeGistAndLocalData(gistData: UsageCache, localData: DailyData[]): Promise<UsageCache> {
     try {
-      console.log(`🔄 데이터 병합 중: Gist(${gistData.appUsage.length}개 앱) + 로컬(${localData.length}일치)`);
-      console.log(`⚠️ [CRITICAL] Gist 데이터 병합 로직 수정됨 - 과거 데이터 보존 모드`);
-      
-      // ⚠️ 중요: Gist 데이터를 무조건 "오늘"로 가정하지 않음
-      // 대신 로컬 데이터 우선 사용하고, Gist는 참고용으로만 활용
-      
       const today = new Date().toISOString().split('T')[0];
+      console.log(`🔄 [BackupService] 데이터 병합 중: Gist(${gistData.appUsage.length}개 앱) + 로컬(${localData.length}일치)`);
+      console.log(`📅 [BackupService] 오늘 날짜: ${today}`);
+      
       const todayLocalData = localData.find(data => data.date === today);
       
       if (todayLocalData) {
-        // 오늘 로컬 데이터가 있으면, 그것을 우선 사용
-        console.log(`📅 [SAFE] 오늘(${today}) 로컬 데이터 우선 사용 - 과거 데이터 보존됨`);
-        console.log(`📊 [SAFE] 로컬 데이터: ${todayLocalData.appUsage.length}개 앱, ${todayLocalData.dailyStats.total_usage_seconds}초`);
+        // 로컬에 오늘 데이터가 있으면 우선 사용 (가장 안전)
+        console.log(`✅ [BackupService] 로컬 오늘(${today}) 데이터 우선 사용`);
+        console.log(`📊 [BackupService] 로컬 데이터: ${todayLocalData.appUsage.length}개 앱, ${todayLocalData.dailyStats.total_usage_seconds}초`);
         
-        // 로컬의 오늘 데이터만 사용 (과거 데이터 건드리지 않음)
         return {
           appUsage: todayLocalData.appUsage,
           dailyStats: todayLocalData.dailyStats,
           platformStats: todayLocalData.platformStats
         };
       } else {
-        // 오늘 로컬 데이터가 없는 경우에만 Gist 데이터 사용
-        console.log(`📅 [CAUTION] 오늘(${today}) 로컬 데이터 없음 - Gist에서 오늘치만 추출 시도`);
+        // 로컬에 오늘 데이터가 없으면 Gist 오늘 데이터 사용
+        console.log(`🔄 [BackupService] 로컬 오늘 데이터 없음 - Gist 오늘 데이터 확인`);
         
-        // Gist 데이터가 실제로는 누적 데이터이므로, 신중하게 처리
-        // 일단 빈 상태로 시작하는 것이 안전
-        return {
-          appUsage: [],
-          dailyStats: {
-            total_apps: 0,
-            total_usage_seconds: 0,
-            date: today
-          },
-          platformStats: {
-            windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-            macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-            android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
-          }
-        };
+        if (gistData.dailyStats.date === today && gistData.appUsage.length > 0) {
+          // Gist 데이터의 날짜가 오늘이고 데이터가 있으면 사용
+          console.log(`✅ [BackupService] Gist 오늘(${today}) 데이터 사용: ${gistData.appUsage.length}개 앱`);
+          return gistData;
+        } else {
+          // 둘 다 없으면 빈 오늘 데이터로 시작
+          console.log(`📋 [BackupService] 오늘(${today}) 데이터 없음 - 새로 시작`);
+          return this.createEmptyCache(today);
+        }
       }
       
     } catch (error) {
-      console.error('❌ 데이터 병합 실패:', error);
+      console.error('❌ [BackupService] 데이터 병합 실패:', error);
       // 병합 실패 시 빈 캐시 반환 (안전)
       const today = new Date().toISOString().split('T')[0];
-      return {
-        appUsage: [],
-        dailyStats: {
-          total_apps: 0,
-          total_usage_seconds: 0,
-          date: today
-        },
-        platformStats: {
-          windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-          macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-          android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
-        }
-      };
+      return this.createEmptyCache(today);
     }
+  }
+
+  /**
+   * 빈 캐시 생성 헬퍼 메서드
+   */
+  private createEmptyCache(date: string): UsageCache {
+    return {
+      appUsage: [],
+      dailyStats: {
+        total_apps: 0,
+        total_usage_seconds: 0,
+        date: date
+      },
+      platformStats: {
+        windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+        macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+        android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
+      }
+    };
   }
 
   /**

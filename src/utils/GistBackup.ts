@@ -145,73 +145,48 @@ export class GistBackup {
     }
   }
 
-  // 기존 호환성을 위한 메서드 (BackupData 형태로 반환)
+  // 기존 호환성을 위한 메서드 (BackupData 형태로 반환) - 오늘 날짜 데이터만 반환
   public async loadFromGist(): Promise<BackupData> {
     try {
       const structuredData = await this.loadStructuredData();
+      const today = new Date().toISOString().split('T')[0];
       
-      // 모든 날짜의 데이터를 하나로 병합하여 BackupData 형태로 반환
-      const allAppUsage: any[] = [];
-      let totalUsageSeconds = 0;
-      let totalApps = 0;
+      console.log(`🔍 [GistBackup] 오늘 날짜(${today}) 데이터만 로드 시도`);
       
-      const platformStats = {
-        windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-        macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-        android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
-      };
-
-      // 모든 날짜의 데이터를 병합
-      Object.keys(structuredData).forEach(dateKey => {
-        if (dateKey === 'metadata') return;
+      // 오늘 날짜 데이터만 추출
+      const todayData = structuredData[today];
+      
+      if (todayData && 'appUsage' in todayData && 'dailyStats' in todayData) {
+        console.log(`✅ [GistBackup] 오늘(${today}) 데이터 발견 - ${todayData.appUsage.length}개 앱, ${todayData.dailyStats.total_usage_seconds}초`);
         
-        const dailyData = structuredData[dateKey];
-        // Type guard: DailyData인지 확인
-        if ('appUsage' in dailyData && 'dailyStats' in dailyData) {
-          allAppUsage.push(...dailyData.appUsage);
-          totalUsageSeconds += dailyData.dailyStats.total_usage_seconds;
-        }
-      });
-
-      // 앱별로 중복 제거 및 병합
-      const appMap = new Map();
-      allAppUsage.forEach(app => {
-        const key = `${app.app_name}_${app.platform}`;
-        if (appMap.has(key)) {
-          const existing = appMap.get(key);
-          existing.total_usage_seconds += app.total_usage_seconds;
-          existing.lastUpdated = app.lastUpdated > existing.lastUpdated ? app.lastUpdated : existing.lastUpdated;
-        } else {
-          appMap.set(key, { ...app });
-        }
-      });
-
-      const mergedApps = Array.from(appMap.values());
-      totalApps = mergedApps.length;
-
-      // 플랫폼별 통계 재계산
-      (['windows', 'macos', 'android'] as const).forEach(platform => {
-        const platformApps = mergedApps.filter(app => app.platform === platform);
-        platformStats[platform] = {
-          apps: platformApps,
-          stats: {
-            total_apps: platformApps.length,
-            total_usage_seconds: platformApps.reduce((sum, app) => sum + app.total_usage_seconds, 0)
-          }
+        // 오늘 데이터만 반환 (과거 데이터 누적하지 않음)
+        return {
+          appUsage: todayData.appUsage,
+          dailyStats: todayData.dailyStats,
+          platformStats: todayData.platformStats,
+          backupTimestamp: structuredData.metadata.lastUpdated
         };
-      });
+      } else {
+        console.log(`📋 [GistBackup] 오늘(${today}) 데이터 없음 - 빈 데이터 반환`);
+        
+        // 오늘 데이터가 없으면 빈 상태 반환
+        const platformStats = {
+          windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } }
+        };
 
-      console.log('✅ Gist에서 병합된 데이터 로드 완료');
-      return {
-        appUsage: mergedApps,
-        dailyStats: {
-          total_apps: totalApps,
-          total_usage_seconds: totalUsageSeconds,
-          date: new Date().toISOString().split('T')[0]
-        },
-        platformStats,
-        backupTimestamp: structuredData.metadata.lastUpdated
-      };
+        return {
+          appUsage: [],
+          dailyStats: {
+            total_apps: 0,
+            total_usage_seconds: 0,
+            date: today
+          },
+          platformStats,
+          backupTimestamp: structuredData.metadata.lastUpdated
+        };
+      }
     } catch (error) {
       console.error('❌ Gist 데이터 로드 실패:', error);
       throw error;

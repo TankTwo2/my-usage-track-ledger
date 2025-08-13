@@ -32,10 +32,34 @@ export class UsageTracker {
 
   public setCache(cache: UsageCache): void {
     this.usageCache = cache;
+    console.log(`📊 [UsageTracker] 캐시 설정됨: ${cache.dailyStats.date}, ${cache.appUsage.length}개 앱`);
   }
 
   public getCache(): UsageCache {
+    // 날짜 변경 확인 및 캐시 초기화
+    this.checkAndResetCacheIfDateChanged();
     return this.usageCache;
+  }
+
+  /**
+   * 날짜 변경 확인 및 캐시 초기화
+   */
+  private checkAndResetCacheIfDateChanged(): void {
+    const today = new Date().toISOString().split('T')[0];
+    const cacheDate = this.usageCache.dailyStats.date;
+    
+    if (cacheDate !== today) {
+      console.log(`📅 [UsageTracker] 날짜 변경 감지: ${cacheDate} → ${today}`);
+      console.log(`🔄 [UsageTracker] 캐시 초기화 - 새로운 날짜로 시작`);
+      
+      // 이전 캐시 정보 로깅
+      console.log(`📊 [UsageTracker] 이전 캐시(${cacheDate}): ${this.usageCache.appUsage.length}개 앱, ${this.usageCache.dailyStats.total_usage_seconds}초`);
+      
+      // 새로운 날짜로 캐시 초기화
+      this.usageCache = this.initializeCache();
+      
+      console.log(`✅ [UsageTracker] 캐시 초기화 완료: ${today} 날짜로 재설정`);
+    }
   }
 
   public startTracking(): void {
@@ -56,6 +80,9 @@ export class UsageTracker {
 
   private async sampleCurrentApp(): Promise<void> {
     try {
+      // 샘플링 전에 날짜 변경 확인
+      this.checkAndResetCacheIfDateChanged();
+      
       console.log('🔄 [UsageTracker] 샘플링 시작...');
       const appName = await this.systemMonitor.getFocusedApp();
       console.log(`📱 [UsageTracker] 감지된 앱: ${appName || 'null'}`);
