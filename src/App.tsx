@@ -6,9 +6,10 @@ import { useUsageData } from './hooks/useUsageData';
 import { DataService } from './services/DataService';
 
 function App() {
-  // GitHub 토큰과 Gist ID (환경변수에서 로드)
+  // GitHub 토큰과 Gist ID (환경변수 또는 URL에서 로드)
   const GITHUB_TOKEN = process.env.REACT_APP_GITHUB_TOKEN || '';
-  const GIST_ID = process.env.REACT_APP_GIST_ID || '';
+  const URL_GIST_ID = DataService.loadGistIdFromURL();
+  const GIST_ID = URL_GIST_ID || process.env.REACT_APP_GIST_ID || '';
 
   const {
     state,
@@ -57,51 +58,86 @@ function App() {
 
   // 초기 데이터 로드
   useEffect(() => {
-    const electronAvailable = (window as any).electronAPI !== undefined;
-    updateState({ isElectron: electronAvailable });
+    const initializeData = async () => {
+      const electronAvailable = (window as any).electronAPI !== undefined;
+      updateState({ isElectron: electronAvailable });
 
-    // URL에서 데이터 로드 시도
-    const urlData = DataService.loadDataFromURL();
+      // 1. URL에서 압축된 데이터 로드 시도
+      const urlData = DataService.loadDataFromURL();
+      
+      if (urlData) {
+        // URL에서 데이터를 성공적으로 로드한 경우
+        console.log('✅ URL 압축 데이터에서 로드 성공');
+        updateState({
+          appUsage: urlData.appUsage || [],
+          dailyStats: urlData.dailyStats || {
+            total_apps: 0,
+            total_usage_seconds: 0,
+            date: new Date().toISOString().split('T')[0],
+          },
+          platformStats: urlData.platformStats || {
+            windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+            android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+          },
+          loading: false,
+        });
+        return;
+      }
 
-    if (urlData) {
-      // URL에서 데이터를 성공적으로 로드한 경우
-      updateState({
-        appUsage: urlData.appUsage || [],
-        dailyStats: urlData.dailyStats || {
-          total_apps: 0,
-          total_usage_seconds: 0,
-          date: new Date().toISOString().split('T')[0],
-        },
-        platformStats: urlData.platformStats || {
-          windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-          macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-          android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
-        },
-        loading: false,
-      });
-    } else {
-      // URL에 데이터가 없는 경우
+      // 2. URL에서 Gist ID로 데이터 로드 시도
+      const gistId = DataService.loadGistIdFromURL();
+      if (gistId) {
+        console.log(`🔄 URL에서 Gist ID 감지: ${gistId}`);
+        try {
+          const gistData = await DataService.loadGistDataFromURL();
+          if (gistData) {
+            console.log('✅ URL Gist에서 데이터 로드 성공');
+            updateState({
+              appUsage: gistData.appUsage || [],
+              dailyStats: gistData.dailyStats || {
+                total_apps: 0,
+                total_usage_seconds: 0,
+                date: new Date().toISOString().split('T')[0],
+              },
+              platformStats: gistData.platformStats || {
+                windows: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                macos: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+                android: { apps: [], stats: { total_apps: 0, total_usage_seconds: 0 } },
+              },
+              loading: false,
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('❌ URL Gist 데이터 로드 실패:', error);
+        }
+      }
+
+      // 3. Electron 또는 브라우저 기본 로직
       if (electronAvailable) {
         loadElectronData();
       } else {
         loadBrowserData();
       }
-    }
 
-    // Electron에서 사용량 모니터링 시작
-    if (electronAvailable && DataService.checkElectronAPI()) {
-      console.log('Electron API 확인됨 - 모니터링 시작');
-    } else if (electronAvailable) {
-      console.log('Electron API가 아직 로드되지 않았습니다. 잠시 후 다시 시도합니다.');
-      // 1초 후 다시 시도
-      setTimeout(() => {
-        if (DataService.checkElectronAPI()) {
-          console.log('Electron API 확인됨 - 모니터링 시작');
-        } else {
-          console.log('Electron API 로드 실패');
-        }
-      }, 1000);
-    }
+      // Electron에서 사용량 모니터링 시작
+      if (electronAvailable && DataService.checkElectronAPI()) {
+        console.log('Electron API 확인됨 - 모니터링 시작');
+      } else if (electronAvailable) {
+        console.log('Electron API가 아직 로드되지 않았습니다. 잠시 후 다시 시도합니다.');
+        // 1초 후 다시 시도
+        setTimeout(() => {
+          if (DataService.checkElectronAPI()) {
+            console.log('Electron API 확인됨 - 모니터링 시작');
+          } else {
+            console.log('Electron API 로드 실패');
+          }
+        }, 1000);
+      }
+    };
+
+    initializeData();
   }, [loadElectronData, loadBrowserData, updateState]);
 
   const formatCurrentDateTime = (date: Date): string => {
